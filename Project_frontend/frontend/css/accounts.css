@@ -1,0 +1,185 @@
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.section-head p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.65);
+  font-size: 0.85rem;
+}
+
+.section-head .btn {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#cloud-accounts-table{
+  text-align: center;
+}
+
+.table-wrapper {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  margin-top: 1rem;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.list-table thead {
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.list-table th,
+.list-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.95rem;
+  vertical-align: middle;
+}
+
+.list-table th {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.list-table td:last-child {
+  text-align: right;
+}
+
+.list-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.action-buttons .btn {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.issues-container {
+  margin-top: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.issue-card {
+  border: 1px solid #ffb4b4;
+  background: #fff5f5;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.issue-title {
+  font-weight: 600;
+  color: #c0392b;
+  margin-bottom: 6px;
+}
+
+.issue-solution {
+  color: #444;
+  font-size: 14px;
+}
+.provider-pill,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.provider-pill {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.status-badge.status-connected {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.status-badge.status-error {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+.status-badge.status-pending {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.scan-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.scan-history-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.job-id {
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.scan-history-cell {
+  min-width: 230px;
+}
+
+
+
+.muted-text {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.empty-row {
+  text-align: center;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+@media (max-width: 720px) {
+  .list-table th,
+  .list-table td {
+    font-size: 0.85rem;
+    padding: 0.75rem;
+  }
+
+  .action-buttons {
+    justify-content: flex-start;
+  }
+}

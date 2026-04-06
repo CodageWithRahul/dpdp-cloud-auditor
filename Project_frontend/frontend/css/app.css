@@ -1,0 +1,236 @@
+:root {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #e2e8f0;
+  background-color: #030712;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.2), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.12), transparent 55%),
+    #030712;
+  color: inherit;
+}
+
+.page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.25rem 2.5rem;
+  background: rgba(2, 6, 23, 0.8);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.brand-logo h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.brand-logo .eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.primary-nav {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.primary-nav .nav-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: #e2e8f0;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.primary-nav .nav-link.active {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.primary-nav .nav-link:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-user div {
+  text-align: right;
+  line-height: 1.25;
+}
+
+.nav-user .user-link {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-user .user-link:hover {
+  color: #60a5fa;
+}
+
+.nav-user p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.main-content {
+  flex: 1;
+  width: min(1300px, 100%);
+  margin: 0 auto;
+  padding: 1.75rem 2rem 2.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.panel {
+  background: rgba(6, 11, 26, 0.92);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 1.5rem;
+  box-shadow: 0 25px 45px rgba(2, 6, 23, 0.4);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-head h2,
+.section-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.section-head p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.65);
+  font-size: 0.9rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.65rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: #e2e8f0;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #34d399, #0ea5e9);
+  color: #020617;
+  box-shadow: 0 12px 25px rgba(16, 185, 129, 0.35);
+}
+
+.btn.secondary {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.message {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  min-height: 1.2rem;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.message.error {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.empty-row {
+  text-align: center;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.app-footer {
+  padding: 1.25rem 2.5rem;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.6);
+  font-size: 0.9rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+@media (max-width: 900px) {
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .primary-nav {
+    justify-content: flex-start;
+  }
+
+  .main-content {
+    padding: 1.5rem;
+  }
+
+  .app-footer {
+    padding: 1rem 1.5rem;
+  }
+}

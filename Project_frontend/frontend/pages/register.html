@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register · DPDP Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/auth.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+</head>
+<body class="page">
+  <main class="auth-card">
+    <h1>Create your space</h1>
+    <p>Register an account to manage cloud audits.</p>
+    <form id="register-form" class="form-grid" novalidate>
+      <label for="reg-username">Username</label>
+      <input class="form-control" type="text" id="reg-username" autocomplete="username" required>
+
+      <label for="reg-email">Email</label>
+      <input class="form-control" type="email" id="reg-email" autocomplete="email" required>
+
+      <label for="reg-password">Password</label>
+      <div class="input-with-toggle">
+        <input class="form-control" type="password" id="reg-password" autocomplete="new-password" required>
+        <button type="button" class="password-toggle" data-toggle-for="reg-password" aria-label="Show password">Show</button>
+      </div>
+
+      <div id="register-message" class="message" aria-live="polite"></div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Register</button>
+        <a class="btn btn-secondary" role="button" href="login.html">Back to login</a>
+      </div>
+    </form>
+  </main>
+  <script type="module" src="../components/loader/loader.js"></script>
+  <script type="module" src="../js/register.js"></script>
+</body>
+</html>

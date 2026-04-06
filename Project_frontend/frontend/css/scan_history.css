@@ -1,0 +1,78 @@
+.status-chip {
+  display: inline-flex;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.status-chip.running {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.status-chip.completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.status-chip.failed {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+.status-chip.pending {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.list-table th,
+.list-table td {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .list-table th,
+  .list-table td {
+    font-size: 0.78rem;
+  }
+}
+
+.table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.list-table th,
+.list-table td {
+  padding: 0.95rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.list-table thead th {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.7);
+  background: rgba(2, 6, 23, 0.9);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.list-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.list-table td {
+  color: rgba(226, 232, 240, 0.8);
+}

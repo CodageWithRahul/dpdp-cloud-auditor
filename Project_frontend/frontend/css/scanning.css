@@ -1,0 +1,150 @@
+.scanning-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.scan-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scan-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scan-title-row h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.live-scan-loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: scan-spin 0.8s linear infinite;
+}
+
+.live-scan-loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+}
+
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scan-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(2, 6, 23, 0.9);
+}
+
+.scan-meta__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scan-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.scan-status-row .status-chip {
+  margin-bottom: 0;
+}
+
+#scan-region {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.scan-progress-panel,
+.scan-tip-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(2, 6, 23, 0.92);
+  padding: 1.25rem;
+}
+
+.scan-progress-track {
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.85rem;
+}
+
+.scan-progress-fill {
+  width: 52%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.8), rgba(16, 185, 129, 0.9));
+  animation: scan-progress 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes scan-progress {
+  from {
+    width: 42%;
+  }
+  to {
+    width: 85%;
+  }
+}
+
+.scan-tip-panel header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.security-tips {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  list-style-type: disc;
+}
+
+.security-tips li {
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.scan-actions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scan-actions-panel .btn {
+  border-radius: 10px;
+}
+
+@media (max-width: 600px) {
+  .button-group {
+    flex-direction: column;
+  }
+}

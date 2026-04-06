@@ -1,0 +1,211 @@
+.page {
+  min-height: 100vh;
+  margin: 0;
+  padding: 2rem 1rem;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.2), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.12), transparent 55%),
+    #030712;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e2e8f0;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  background: rgba(6, 11, 26, 0.92);
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 2.5rem 2.25rem;
+  box-shadow: 0 25px 45px rgba(2, 6, 23, 0.6);
+  text-align: left;
+  color: inherit;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 1.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-card p {
+  margin-top: 0.35rem;
+  margin-bottom: 1.25rem;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.95rem;
+}
+
+.form-grid {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+}
+
+.form-grid label {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.input-with-toggle {
+  position: relative;
+}
+
+.input-with-toggle .form-control {
+  padding-right: 3.8rem;
+}
+
+.form-control::placeholder {
+  color: rgba(226, 232, 240, 0.55);
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.9);
+  outline-offset: 2px;
+}
+
+.password-toggle.is-visible {
+  color: #34d399;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.8rem 1.4rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  color: #e2e8f0;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #34d399, #0ea5e9);
+  color: #020617;
+  box-shadow: 0 12px 25px rgba(16, 185, 129, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(59, 130, 246, 0.25);
+  color: #e2e8f0;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-actions .btn {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.form-actions .btn + .btn {
+  flex: 1;
+}
+
+.message {
+  font-size: 0.9rem;
+  min-height: 20px;
+  margin-top: 0.35rem;
+}
+
+.message--error {
+  color: #f87171;
+}
+
+.message--success {
+  color: #34d399;
+}
+/* Override global form styles only inside auth pages */
+
+.auth-card .form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  margin-top: 1.4rem;
+}
+
+.auth-card .form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.auth-card .form-actions .btn {
+  flex: 1;
+}
+
+.auth-card .form-control {
+  width: 100%;
+  box-sizing: border-box;
+}
+.input-with-toggle {
+  position: relative;
+  width: 100%;
+}
+
+.input-with-toggle .form-control {
+  width: 100%;
+  padding-right: 4rem;
+  box-sizing: border-box;
+}
+.auth-card label {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+@media (max-width: 540px) {
+  .auth-card {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+}

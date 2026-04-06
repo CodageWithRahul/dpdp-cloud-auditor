@@ -1,0 +1,153 @@
+import importlib
+import logging
+import pkgutil
+
+from botocore.exceptions import ClientError
+from django.utils.text import slugify
+
+from scanner.checks import aws as aws_checks_package
+
+logger = logging.getLogger(__name__)
+
+_SERVICE_NAME_MAP = {
+    "ec2_checks": "EC2",
+    "s3_checks": "S3",
+    "iam_checks": "IAM",
+    "security_group_checks": "EC2",
+}
+
+
+def _discover_check_modules():
+    for finder, name, ispkg in pkgutil.iter_modules(aws_checks_package.__path__):
+        if ispkg:
+            continue
+        yield importlib.import_module(f"{aws_checks_package.__name__}.{name}")
+
+
+def _module_label(module):
+    return module.__name__.split(".")[-1]
+
+
+def _default_service(module):
+    label = _module_label(module)
+    if label in _SERVICE_NAME_MAP:
+        return _SERVICE_NAME_MAP[label]
+    if label.endswith("_checks"):
+        return label.replace("_checks", "").upper()
+    return label.upper()
+
+
+def _build_check_id(module, finding):
+    prefix = _module_label(module).replace("_checks", "").upper()
+    title = finding.get("check_title") or finding.get("issue_type") or "unknown-check"
+    slug = slugify(title).replace("-", "_").upper()
+    slug = slug or "UNKNOWN"
+    return f"{prefix}_{slug}"
+
+
+def _has_ec2_instances(session):
+    client = session.client("ec2")
+    try:
+        return bool(client.describe_instances(MaxResults=5).get("Reservations"))
+    except ClientError as exc:
+        logger.debug("EC2 describe_instances failed: %s", exc)
+        return False
+
+
+def _has_security_groups(session):
+    client = session.client("ec2")
+    try:
+        return bool(client.describe_security_groups(MaxResults=5).get("SecurityGroups"))
+    except ClientError as exc:
+        logger.debug("EC2 describe_security_groups failed: %s", exc)
+        return False
+
+
+def _has_s3_buckets(session):
+    client = session.client("s3")
+    try:
+        return bool(client.list_buckets().get("Buckets"))
+    except ClientError as exc:
+        logger.debug("S3 list_buckets failed: %s", exc)
+        return False
+
+
+def _has_iam_entities(session):
+    client = session.client("iam")
+    try:
+        return bool(client.list_users(MaxItems=1).get("Users"))
+    except ClientError as exc:
+        logger.debug("IAM list_users failed: %s", exc)
+        return False
+
+
+_SERVICE_RESOURCE_CHECKS = {
+    "ec2_checks": _has_ec2_instances,
+    "security_group_checks": _has_security_groups,
+    "s3_checks": _has_s3_buckets,
+    "iam_checks": _has_iam_entities,
+}
+
+
+def _service_available(module, session):
+    checker = _SERVICE_RESOURCE_CHECKS.get(_module_label(module))
+    if not checker:
+        return True
+    return checker(session)
+
+
+def run_all_checks(session, log=None, stop_requested=None):
+    findings = []
+    service_outcomes = {}
+
+    for module in _discover_check_modules():
+        service_name = _default_service(module)
+        if stop_requested and stop_requested():
+            logger.info("AWS scan interrupted before running %s checks.", service_name)
+            break
+
+        if not _service_available(module, session):
+            previous = service_outcomes.get(service_name)
+            if previous != "scanned":
+                service_outcomes[service_name] = "skipped"
+            if log:
+                log(f"Skipping {service_name} checks because no resources were detected.")
+            logger.debug("Skipping %s because service cannot be detected", _module_label(module))
+            continue
+
+        if log:
+            log(f"Running {service_name} checks.")
+
+        runner = getattr(module, "run", None)
+        if not callable(runner):
+            continue
+
+        service_outcomes[service_name] = "scanned"
+
+        logger.info("Running %s checks (%s).", service_name, module.__name__)
+
+        raw_findings = runner(session) or []
+        logger.info("%s returned %d findings", service_name, len(raw_findings))
+        if log:
+            log(f"{service_name} checks returned {len(raw_findings)} findings.")
+
+        for finding in raw_findings:
+            finding.setdefault("service_name", service_name)
+            finding.setdefault("status", "FAIL")
+            finding.setdefault("check_title", finding.get("issue_type") or "Unnamed check")
+            finding.setdefault("check_id", _build_check_id(module, finding))
+
+        findings.extend(raw_findings)
+
+    scanned_services = [
+        name for name, status in service_outcomes.items() if status == "scanned"
+    ]
+    skipped_services = [
+        name for name, status in service_outcomes.items() if status == "skipped"
+    ]
+
+    return {
+        "findings": findings,
+        "scanned_services": scanned_services,
+        "skipped_services": skipped_services,
+    }

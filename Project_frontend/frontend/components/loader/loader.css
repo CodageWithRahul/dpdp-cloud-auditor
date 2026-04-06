@@ -1,0 +1,110 @@
+#app-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(3,7,18,0.82);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+#app-loader.hidden {
+  display: none;
+}
+
+/* MAIN 3D CONTAINER */
+
+.loader-3d {
+  width: 140px;
+  height: 140px;
+  position: relative;
+  perspective: 800px;
+}
+
+/* RINGS */
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.ring-outer {
+  border: 2px solid rgba(56,189,248,0.6);
+  animation: spinOuter 3s linear infinite;
+  box-shadow: 0 0 14px rgba(56,189,248,0.7);
+}
+
+.ring-middle {
+  inset: 12px;
+  border: 2px dashed rgba(16,185,129,0.8);
+  animation: spinMiddle 2.2s linear infinite reverse;
+}
+
+.ring-inner {
+  inset: 26px;
+  border: 2px solid rgba(255,255,255,0.25);
+  animation: spinInner 1.6s linear infinite;
+}
+
+/* CORE */
+
+.core {
+  position: absolute;
+  inset: 42px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,0.6), transparent 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: corePulse 2.5s ease-in-out infinite;
+}
+
+/* CLOUD */
+
+.cloud-icon {
+  position: absolute;
+  width: 38px;
+  color: #38bdf8;
+  animation: cloudFloat 3.2s ease-in-out infinite;
+}
+
+/* SHIELD */
+
+.shield-icon {
+  position: absolute;
+  width: 26px;
+  color: #34d399;
+  transform: translateY(12px);
+  animation: shieldPulse 2s ease-in-out infinite;
+}
+
+/* ANIMATIONS */
+
+@keyframes spinOuter {
+  to { transform: rotateX(60deg) rotate(360deg); }
+}
+
+@keyframes spinMiddle {
+  to { transform: rotateY(60deg) rotate(360deg); }
+}
+
+@keyframes spinInner {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes corePulse {
+  0%,100% { transform: scale(0.95); opacity:0.8; }
+  50% { transform: scale(1.05); opacity:1; }
+}
+
+@keyframes cloudFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes shieldPulse {
+  0%,100% { transform: translateY(12px) scale(0.9); }
+  50% { transform: translateY(12px) scale(1.1); }
+}

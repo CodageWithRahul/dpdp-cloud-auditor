@@ -1,0 +1,349 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 1rem;
+}
+
+.stat-card p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.65);
+  font-size: 0.8rem;
+}
+.account-status-corner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.account-status-corner.connected {
+  background: #e6f7ee;
+  color: #1e8e3e;
+}
+
+.account-status-corner.not-connected {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.connection-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #c62828;
+}
+
+.solution {
+  font-size: 12px;
+  color: #555;
+}
+.account-card {
+  position: relative;
+}
+
+.connection-status-group {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  z-index: 1;
+}
+
+.status-refresh {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.status-refresh:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.65);
+}
+
+.status-refresh:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+.connection-status {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* checking */
+.connection-status.checking {
+  background: #f0f0f0;
+  border-color: #ccc;
+  color: #555;
+}
+
+/* connected */
+.connection-status.connected {
+  background: #e6f7ee;
+  border-color: #2ecc71;
+  color: #1e8e3e;
+}
+
+/* not connected */
+.connection-status.not-connected {
+  background: #fdecea;
+  border-color: #e53935;
+  color: #c62828;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.65rem;
+}
+
+.stat-card strong#last-scan-info {
+  font-size: 1.2rem;
+  letter-spacing: 0.01em;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.account-card {
+  background: rgba(4, 7, 18, 0.85);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-card h4 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.account-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.account-title-row h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.provider-badge {
+    padding: 0.15rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #34d399, #0ea5e9);
+    color: #020617;
+}
+
+.account-card__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.last-scan-label,
+.region-label {
+  margin: 0;
+}
+
+.region-label {
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.region-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 240px;
+}
+
+.region-select {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.95);
+  padding: 0.35rem 0.55rem;
+  color: inherit;
+  font-size: 0.9rem;
+  min-width: 160px;
+  min-height: 36px;
+  max-height: 120px;
+  overflow-y: auto;
+  box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.8);
+}
+
+.region-select:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+}
+
+.region-missing {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(248, 113, 113, 0.85);
+}
+
+.recent-scans-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.section-label {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.connection-error__message {
+  display: block;
+  margin-top: 0.25rem;
+  color: inherit;
+}
+
+.actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.actions .btn {
+  width: 100%;
+}
+
+.actions .btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(148, 163, 184, 0.5);
+    transition: all 0.3s ease;
+
+}
+
+
+.actions .btn.secondary:hover{
+    background: linear-gradient(135deg, #34d399, #0ea5e9);
+    color: #020617;
+}
+.actions .btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.recent-scans {
+  margin: 0;
+  padding: 0;
+}
+
+.recent-scans li {
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+@media (max-width: 640px) {
+  .accounts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.85);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.scan-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scan-overlay__content {
+  text-align: center;
+  background: rgba(15, 23, 42, 0.95);
+  padding: 1.5rem 1.75rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.35);
+}
+
+.scan-overlay__spinner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 5px solid rgba(59, 130, 246, 0.25);
+  border-top-color: #3b82f6;
+  margin: 0 auto 0.85rem;
+  animation: overlay-spin 1s linear infinite;
+}
+
+.scan-overlay__text {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+@keyframes overlay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

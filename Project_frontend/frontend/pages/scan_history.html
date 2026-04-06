@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan History Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/scan_history.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+</head>
+<body>
+  <script type="module" src="../components/loader/loader.js"></script>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Audit Trail</p>
+          <h2>Scan History</h2>
+          <p>Review every scan job and jump straight to the findings.</p>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="section-head">
+          <h3>Recent scans</h3>
+        </div>
+        <div class="table-wrapper">
+                    <table class="list-table">
+            <thead>
+              <tr>
+                <th>Scan ID</th>
+                <th>Cloud Account</th>
+                <th>Cloud Provider</th>
+                <th>Status</th>
+                <th>Issues Found</th>
+                <th>Scan Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="scan-history-list">
+              <tr>
+                <td colspan="7" class="empty-row">Loading scan history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('scan-history');
+  </script>
+  <script type="module" src="../js/scan_history.js"></script>
+</body>
+</html>

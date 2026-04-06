@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User Details · Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/user.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+</head>
+<body>
+  <script type="module" src="../components/loader/loader.js"></script>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <section class="panel panel-profile">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Profile</p>
+            <h2>User profile</h2>
+          </div>
+        </div>
+        <div class="profile-card">
+          <div class="profile-card__header">
+            <div class="profile-card__avatar" aria-hidden="true">
+              <span id="profile-initials">—</span>
+            </div>
+            <div>
+              <p class="eyebrow profile-card__eyebrow">Account</p>
+              <h3 class="profile-card__username" id="profile-username">—</h3>
+              <p class="profile-card__subtitle">Cloud Auditor member</p>
+            </div>
+          </div>
+          <div class="profile-card__details">
+            <article class="profile-card__detail">
+              <p class="profile-card__label">Full name</p>
+              <p class="profile-card__value" id="profile-full-name">—</p>
+            </article>
+            <article class="profile-card__detail">
+              <p class="profile-card__label">Email</p>
+              <p class="profile-card__value" id="profile-email">—</p>
+            </article>
+            <article class="profile-card__detail">
+              <p class="profile-card__label">Account created</p>
+              <p class="profile-card__value" id="profile-created">—</p>
+            </article>
+            <article class="profile-card__detail">
+              <p class="profile-card__label">Last login</p>
+              <p class="profile-card__value" id="profile-last-login">—</p>
+            </article>
+          </div>
+          <div class="profile-card__actions">
+            <div class="form-actions">
+              <button id="update-details" class="btn primary" type="button">Update details</button>
+              <button id="change-password" class="btn secondary" type="button">Change password</button>
+            </div>
+          </div>
+          <div id="profile-message" class="message profile-card__message" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('user-details');
+  </script>
+  <script type="module" src="../js/user.js"></script>
+</body>
+</html>

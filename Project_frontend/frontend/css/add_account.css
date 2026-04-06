@@ -1,0 +1,110 @@
+.add-account-panel {
+  margin-top: 0.25rem;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.account-form label {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.credential-sections {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.loader-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+
+.loader-overlay.hidden{
+  display:none;
+}
+
+.loader-box{
+  background:#020617;
+  padding:30px 40px;
+  border-radius:12px;
+  text-align:center;
+  color:white;
+}
+
+.spinner{
+  width:40px;
+  height:40px;
+  border:4px solid #334155;
+  border-top:4px solid #22c55e;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  margin:auto;
+  margin-bottom:15px;
+}
+
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+.form-section {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  background: rgba(5, 9, 20, 0.85);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.form-section[hidden]{
+  display: none;
+}
+
+.form-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.form-control,
+.select-control,
+textarea.form-control {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.9);
+  padding: 0.65rem 0.85rem;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.back-btn {
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

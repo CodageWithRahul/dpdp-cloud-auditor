@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Run Scan · Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Scanner</p>
+            <h2>Run a scan</h2>
+            <p>Trigger the cloud scanner for any configured account.</p>
+          </div>
+        </div>
+        <form id="scan-form" class="report-form">
+          <label for="cloud-account-select">Choose cloud account</label>
+          <select class="form-control" id="cloud-account-select" required>
+            <option value="">Loading accounts...</option>
+          </select>
+          <label for="cloud-region-select">Choose region</label>
+          <select class="form-control" id="cloud-region-select" required>
+            <option value="">Loading regions...</option>
+          </select>
+          <div class="button-row">
+            <button id="scan-button" class="btn primary" type="submit">Start scan</button>
+            <button class="btn secondary" type="button" onclick="window.location.href='dashboard.html'">Return to dashboard</button>
+          </div>
+          <div id="scan-message" class="message" aria-live="polite"></div>
+        </form>
+      </section>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('dashboard');
+  </script>
+  <script type="module" src="../js/scan.js"></script>
+</body>
+</html>

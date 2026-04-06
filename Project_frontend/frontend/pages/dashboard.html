@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+
+</head>
+<body>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h2>Dashboard</h2>
+          <p>Monitor the platform status and run scans from your connected cloud accounts.</p>
+        </div>
+      </header>
+
+      <section class="panel stats-panel">
+        <div class="section-head">
+          <h3>Environment summary</h3>
+        </div>
+        <div class="stats-grid">
+          <article class="stat-card">
+            <p>Total connected cloud accounts</p>
+            <strong id="total-accounts">0</strong>
+          </article>
+          <article class="stat-card">
+            <p>Total scans performed</p>
+            <strong id="total-scans">0</strong>
+          </article>
+          <article class="stat-card">
+            <p>Total findings</p>
+            <strong id="total-findings">0</strong>
+          </article>
+          <article class="stat-card">
+            <p>Last scan</p>
+            <strong id="last-scan-info">Idle</strong>
+          </article>
+        </div>
+        <div id="dashboard-message" class="message" aria-live="polite"></div>
+      </section>
+
+      <section class="panel accounts-panel">
+        <div class="section-head">
+          <div>
+            <h3>Connected cloud accounts</h3>
+            <p>Click "Run Scan" on any account to start a fresh job.</p>
+          </div>
+        </div>
+        <div id="accounts-list" class="accounts-grid">
+          <p class="empty-row">Loading accounts...</p>
+        </div>
+      </section>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('dashboard');
+  </script>
+  <script type="module" src="../components/loader/loader.js"></script>
+  <script type="module" src="../js/dashboard.js"></script>
+
+</body>
+</html>

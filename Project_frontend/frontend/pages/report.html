@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports Cloud Auditor</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/report.css">
+  <link rel="stylesheet" href="../components/loader/loader.css">
+</head>
+<body>
+  <script type="module" src="../components/loader/loader.js"></script>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h2 id="report-title">Scan Summary & Insights</h2>
+          <p>Visualize recent findings, drill into vulnerabilities, and follow remediation guidance right from one dashboard.</p>
+        </div>
+      </header>
+
+      <section class="panel report-actions">
+        <div class="report-form">
+          <input id="scan-job-id" class="form-control" type="number" min="1" placeholder="Scan job ID">
+          <button id="load-report-button" class="btn primary" type="button">Load report</button>
+        </div>
+        <div id="report-message" class="message" aria-live="polite"></div>
+      </section>
+
+      <section class="panel user-metadata-card">
+        <div class="user-card-grid">
+          <div>
+            <p class="muted">Provider</p>
+            <strong id="report-provider">�</strong>
+          </div>
+          <div>
+            <p class="muted">Cloud account</p>
+            <strong id="report-account">�</strong>
+          </div>
+          <div>
+            <p class="muted">Scan date</p>
+            <strong id="report-scan-date">�</strong>
+          </div>
+          <div>
+            <p class="muted">Region</p>
+            <strong id="report-region">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel report-overview-panel">
+        <div class="overview-grid">
+          <article class="overview-card overview-score-card">
+            <p class="muted">Security posture</p>
+            <strong id="report-risk-score">--</strong>
+            <span id="report-risk-text" class="overview-note">Loading scan risk score...</span>
+          </article>
+          <article class="overview-card overview-status-card">
+            <p class="muted">Report state</p>
+            <strong id="report-state-label">Ready</strong>
+            <span class="overview-note">Visual summary of findings and security health.</span>
+          </article>
+          <article class="overview-card overview-findings-card">
+            <p class="muted">Total findings</p>
+            <strong id="report-findings-count">--</strong>
+            <span class="overview-note">The number of discovered issues in this scan.</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel report-dashboard">
+        <div class="report-grid" id="summary-grid"></div>
+        <div class="severity-card">
+          <h3>Severity distribution</h3>
+          <div id="severity-chart" class="severity-chart"></div>
+        </div>
+      </section>
+
+
+      <section class="panel pie-panel">
+        <header>
+          <h3>Severity split</h3>
+          <p class="muted">Color-coded slices make it easier to compare criticality at a glance.</p>
+        </header>
+        <div class="pie-chart-wrapper">
+          <canvas id="severity-pie-chart" width="260" height="260"></canvas>
+          <div id="severity-pie-legend" class="pie-legend"></div>
+        </div>
+      </section>
+      <section class="panel chart-panel">
+        <header>
+          <h3>Service impact</h3>
+          <p class="muted">Highlights which services contributed most findings.</p>
+        </header>
+        <div id="service-impact-chart" class="service-chart"></div>
+      </section>
+
+      <section class="panel vulnerability-panel">
+        <header>
+          <h3>Vulnerabilities</h3>
+          <p class="muted">Dive into the highest-impact findings from this scan.</p>
+        </header>
+        <p id="report-safety" class="muted"></p>
+        <div class="table-wrapper">
+          <table id="vulnerability-table" class="list-table vulnerability-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Issue</th>
+                <th>Severity</th>
+                <th>Region</th>
+                <th>Recommendation</th>
+                <th>Scan Source</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h3>Action plan</h3>
+          <p class="muted">Tactical next steps based on the services that reported the most critical issues.</p>
+        </header>
+        <ul id="action-plan" class="action-plan"></ul>
+      </section>
+
+      <section class="panel report-logs-panel">
+        <header>
+          <h3>Scan activity log</h3>
+          <p class="muted">Review the backend events recorded for this scan job. Scroll for the full activity history.</p>
+        </header>
+        <div id="report-log-stream" class="report-log-stream">
+          <p class="muted">Logs will appear here after the report loads.</p>
+        </div>
+      </section>
+
+      <section class="panel report-downloads-panel">
+        <header>
+          <h3>Export</h3>
+          <p class="muted">Download the full scan report in your preferred format.</p>
+        </header>
+        <div class="export-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="include-logs-checkbox">
+            <span class="checkmark"></span>
+            Include logs in report
+          </label>
+        </div>
+        <div class="report-downloads">
+          <button id="download-report-pdf" class="btn secondary" type="button">Download PDF</button>
+          <button id="download-report-excel" class="btn secondary" type="button">Download Excel</button>
+        </div>
+      </section>
+
+      <div class="report-footer">
+        <span class="info-chip">Last updated: <strong id="report-last-updated">�</strong></span>
+        <span class="info-chip">Scan job ID: <strong id="report-job-id">�</strong></span>
+      </div>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('reports');
+  </script>
+  <script type="module" src="../js/report.js"></script>
+</body>
+</html>
