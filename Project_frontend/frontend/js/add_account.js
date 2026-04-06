@@ -15,6 +15,13 @@ let subscriptionInput;
 let gcpFileInput;
 let gcpJsonInput;
 let credentialSections = [];
+let editingAccountId = null;
+let originalProvider = null;
+
+const getQueryParam = (name) => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+};
 
 const setMessage = (text = '', type = 'error') => {
   if (!formMessage) return;
@@ -22,6 +29,27 @@ const setMessage = (text = '', type = 'error') => {
   formMessage.classList.remove('error', 'success');
   if (!text) return;
   formMessage.classList.add(type);
+};
+
+const fetchAccountDetails = async (accountId) => {
+  const response = await fetchWithAuth(`${BASE_URL}/api/accounts/cloud-accounts/${accountId}/`, {
+    method: 'GET',
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(result?.detail || 'Unable to load account details.');
+  }
+  return result;
+};
+
+const populateFormForEdit = (account) => {
+  if (!account) return;
+  editingAccountId = account.id;
+  originalProvider = account.provider;
+  providerSelect.value = account.provider;
+  nameInput.value = account.account_name || '';
+  showCredentialSection(account.provider);
+  setMessage('Loaded existing account. Leave credential fields blank to keep current credentials.', 'success');
 };
 
 const showCredentialSection = (provider) => {
@@ -35,15 +63,18 @@ const showCredentialSection = (provider) => {
     const inputs = section.querySelectorAll("input, textarea");
 
     inputs.forEach((input) => {
-
       if (isActive) {
-        input.required = true;     // validate visible provider
+        if (section.dataset.providerSection === 'GCP') {
+          // For GCP, either file upload or pasted JSON is acceptable.
+          input.required = false;
+        } else {
+          input.required = true;     // validate visible provider
+        }
         input.disabled = false;
       } else {
         input.required = false;    // remove validation
         input.disabled = true;     // prevent form submission
       }
-
     });
 
   });
@@ -64,7 +95,7 @@ const readFileAsText = (file) =>
 const handleFormSubmit = async (event) => {
   event.preventDefault();
   setMessage("");
-  
+
   const provider = providerSelect?.value || 'AWS';
   const accountName = nameInput?.value.trim();
   if (!accountName) {
@@ -73,6 +104,7 @@ const handleFormSubmit = async (event) => {
   }
 
   let credentials = null;
+  let hasCredentialInput = false;
 
   if (provider === 'AWS') {
     const accessKey = accessInput?.value.trim();
@@ -80,12 +112,15 @@ const handleFormSubmit = async (event) => {
     const sessionToken = sessionInput?.value.trim();
 
     if (!accessKey || !secretKey) {
-      setMessage('AWS access key and secret key are required.');
-      return;
+      if (!editingAccountId) {
+        setMessage('AWS access key and secret key are required.');
+        return;
+      }
+    } else {
+      credentials = { access_key: accessKey, secret_key: secretKey };
+      if (sessionToken) credentials.session_token = sessionToken;
+      hasCredentialInput = true;
     }
-
-    credentials = { access_key: accessKey, secret_key: secretKey };
-    if (sessionToken) credentials.session_token = sessionToken;
   } else if (provider === 'AZURE') {
     const tenantId = tenantInput?.value.trim();
     const clientId = clientInput?.value.trim();
@@ -93,16 +128,19 @@ const handleFormSubmit = async (event) => {
     const subscriptionId = subscriptionInput?.value.trim();
 
     if (!tenantId || !clientId || !clientSecret || !subscriptionId) {
-      setMessage('All Azure service principal fields are required.');
-      return;
+      if (!editingAccountId) {
+        setMessage('All Azure service principal fields are required.');
+        return;
+      }
+    } else {
+      credentials = {
+        tenant_id: tenantId,
+        client_id: clientId,
+        client_secret: clientSecret,
+        subscription_id: subscriptionId,
+      };
+      hasCredentialInput = true;
     }
-
-    credentials = {
-      tenant_id: tenantId,
-      client_id: clientId,
-      client_secret: clientSecret,
-      subscription_id: subscriptionId,
-    };
   } else if (provider === 'GCP') {
     const pastedJson = gcpJsonInput?.value.trim();
     let jsonText = pastedJson;
@@ -117,17 +155,25 @@ const handleFormSubmit = async (event) => {
       }
     }
 
-    if (!jsonText) {
+    if (jsonText) {
+      try {
+        credentials = JSON.parse(jsonText);
+        hasCredentialInput = true;
+      } catch (jsonError) {
+        setMessage('GCP service account JSON must be valid.');
+        return;
+      }
+    }
+
+    if (!jsonText && !editingAccountId) {
       setMessage('Service account JSON is required for GCP.');
       return;
     }
+  }
 
-    try {
-      credentials = JSON.parse(jsonText);
-    } catch (jsonError) {
-      setMessage('GCP service account JSON must be valid.');
-      return;
-    }
+  if (editingAccountId && provider !== originalProvider && !hasCredentialInput) {
+    setMessage('Changing provider requires providing new credentials.');
+    return;
   }
 
   const payload = { provider, account_name: accountName };
@@ -135,17 +181,27 @@ const handleFormSubmit = async (event) => {
 
   try {
     showLoader();
-    console.log(payload);
-    const response = await fetchWithAuth(`${BASE_URL}/api/accounts/cloud-accounts/`, {
-      method: 'POST',
+
+    const url = editingAccountId
+      ? `${BASE_URL}/api/accounts/cloud-accounts/${editingAccountId}/`
+      : `${BASE_URL}/api/accounts/cloud-accounts/`;
+    const method = editingAccountId ? 'PATCH' : 'POST';
+
+    const response = await fetchWithAuth(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(result?.detail || 'Unable to save account.');
     }
-    setMessage('Account verified and saved successfully!', 'success');
+
+    const successMessage = editingAccountId
+      ? 'Account updated successfully!'
+      : 'Account verified and saved successfully!';
+    setMessage(successMessage, 'success');
     setTimeout(() => {
       window.location.href = 'cloud_accounts.html';
     }, 900);
@@ -173,9 +229,20 @@ const initDomRefs = () => {
 
   credentialSections = document.querySelectorAll('[data-provider-section]');
 };
-const init = () => {
+const init = async () => {
   initDomRefs();
   requireAuth();
+
+  const accountId = getQueryParam('cloud_account_id');
+  if (accountId) {
+    try {
+      const account = await fetchAccountDetails(accountId);
+      populateFormForEdit(account);
+    } catch (error) {
+      setMessage(error?.message || 'Failed to load account details.');
+    }
+  }
+
   showCredentialSection(providerSelect?.value || 'AWS');
   providerSelect?.addEventListener('change', (event) => showCredentialSection(event.target.value));
   accountForm?.addEventListener('submit', handleFormSubmit);

@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CloudAccountListCreateView,
     RegisterView,
+    CloudAccountDetailView,
     CloudAccountRegionsView,
     UserProfileView,
     ChangePasswordView,
@@ -16,6 +17,7 @@ urlpatterns = [
     path("register/", RegisterView.as_view()),
     path("me/", UserProfileView.as_view()),
     path("cloud-accounts/", CloudAccountListCreateView.as_view()),
+    path("cloud-accounts/<int:pk>/", CloudAccountDetailView.as_view()),
     path("cloud-accounts/<int:pk>/connection-status/", ConnectionStatusView.as_view()),
     path("change-password/", ChangePasswordView.as_view()),
     path("<int:pk>/regions/", CloudAccountRegionsView.as_view()),

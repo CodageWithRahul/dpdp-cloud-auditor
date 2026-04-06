@@ -21,8 +21,19 @@ class CloudAccountSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
 
-        provider = attrs.get("provider")
+        provider = attrs.get("provider") or (
+            self.instance.provider if self.instance is not None else None
+        )
         credentials = attrs.get("credentials", {}) or {}
+
+        if self.instance is not None and attrs.get("credentials") is None:
+            if "provider" in attrs and attrs["provider"] != self.instance.provider:
+                raise serializers.ValidationError(
+                    {
+                        "credentials": "Credentials are required when changing the provider."
+                    }
+                )
+            return attrs
 
         if provider == "AWS":
             required = ["access_key", "secret_key"]

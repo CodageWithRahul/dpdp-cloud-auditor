@@ -258,6 +258,8 @@ const createConnectionController = (account, card) => {
   };
   const refreshStatus = async (force = false) => {
     if (!account?.id) return null;
+    
+    
     if (!force) {
       const cached = getCachedConnectionStatus(account.id);
       if (cached) {
@@ -275,6 +277,13 @@ const createConnectionController = (account, card) => {
     }
   };
   refreshButton?.addEventListener('click', () => {
+    // Show "Checking..." immediately before disabling button
+    if (statusEl) {
+      statusEl.textContent = 'Checking...';
+      statusEl.classList.remove('checking', 'connected', 'not-connected');
+      statusEl.classList.add('checking');
+    }
+    
     refreshButton.disabled = true;
     refreshStatus(true).finally(() => {
       refreshButton.disabled = false;

@@ -25,24 +25,27 @@
         <div class="section-head">
           <div>
             <h2>Managed cloud accounts</h2>
-            <p>Start new scans or remove stale credentials.</p>
+            <p>Monitor active connections, refresh credential health, and manage your cloud access securely.</p>
           </div>
-          <a class="btn primary" href="add_account.html">Add Account</a>
+          <div class="section-actions">
+            <a href="add_account.html" class="btn primary">Add account</a>
+          </div>
         </div>
         <div class="table-wrapper">
           <table class="list-table">
             <thead>
               <tr>
+                <th>Status</th>
                 <th>Cloud provider</th>
                 <th>Name</th>
-                <th>Status</th>
+                <th>Connection</th>
                 <th>Last scan</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="cloud-accounts-table">
               <tr>
-                <td colspan="5" class="empty-row">Retrieving cloud account listings...</td>
+                <td colspan="6" class="empty-row">Retrieving cloud account listings...</td>
               </tr>
             </tbody>
           </table>

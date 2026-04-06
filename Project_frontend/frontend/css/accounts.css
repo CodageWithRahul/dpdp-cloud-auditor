@@ -16,13 +16,42 @@
   font-size: 0.85rem;
 }
 
+.status-checking {
+  background: #fff3cd;
+  color: #856404;
+}
 .section-head .btn {
   text-decoration: none;
   white-space: nowrap;
 }
 
-#cloud-accounts-table{
+.status-dot {
+  font-size: 1.2rem;
   text-align: center;
+}
+
+.status-refresh {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.9);
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.status-refresh:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.65);
+}
+
+.status-refresh:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
 }
 
 .table-wrapper {
@@ -47,6 +76,7 @@
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   font-size: 0.95rem;
   vertical-align: middle;
+  text-align: center;
 }
 
 .list-table th {
@@ -56,8 +86,16 @@
   color: rgba(226, 232, 240, 0.6);
 }
 
-.list-table td:last-child {
-  text-align: right;
+.last-scan-cell {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .list-table tbody tr:hover {

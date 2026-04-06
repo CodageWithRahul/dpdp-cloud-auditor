@@ -1,10 +1,46 @@
 import { BASE_URL, fetchWithAuth, requireAuth } from "./api.js";
+import { showLoader, hideLoader } from "../components/loader/loader.js";
 
 const accountsTableBody = document.getElementById("cloud-accounts-table");
 const accountsMessage = document.getElementById("cloud-accounts-message");
 
 let accountsCache = [];
 let scanHistory = [];
+
+const CACHE_KEY = 'cloud_accounts_status';
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
+const getCachedStatus = (accountId) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    const accountCache = cache[accountId];
+    if (!accountCache) return null;
+
+    // Check if cache is expired
+    if (Date.now() - accountCache.timestamp > CACHE_EXPIRY) {
+      delete cache[accountId];
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+      return null;
+    }
+
+    return accountCache;
+  } catch (e) {
+    return null;
+  }
+};
+
+const setCachedStatus = (accountId, status) => {
+  try {
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    cache[accountId] = {
+      ...status,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    // Ignore cache errors
+  }
+};
 
 const providerNames = {
   AWS: "Amazon Web Services",
@@ -28,12 +64,25 @@ const statusLabel = (status) => {
   return "Completed";
 };
 
+const getQueryParam = (name) => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+};
+
 const setMessage = (text = "", type = "success") => {
   if (!accountsMessage) return;
   accountsMessage.textContent = text;
   accountsMessage.classList.remove("error", "success");
   if (!text) return;
   accountsMessage.classList.add(type);
+};
+
+const clearMessageQuery = () => {
+  if (!window.history?.replaceState) return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('message');
+  url.searchParams.delete('message_type');
+  window.history.replaceState({}, document.title, url.pathname + url.search);
 };
 
 const relativeTime = (timestamp) => {
@@ -82,7 +131,7 @@ const renderAccounts = (accounts = accountsCache) => {
   accountsTableBody.innerHTML = "";
   if (!accounts.length) {
     const empty = document.createElement("tr");
-    empty.innerHTML = "<td colspan=\"5\" class=\"empty-row\">No cloud accounts configured.</td>";
+    empty.innerHTML = "<td colspan=\"6\" class=\"empty-row\">No cloud accounts configured.</td>";
     accountsTableBody.appendChild(empty);
     return;
   }
@@ -94,19 +143,25 @@ const renderAccounts = (accounts = accountsCache) => {
     const providerLabel = providerNames[(account.provider || "").toUpperCase()] || account.provider || "Cloud";
     const accountName = account.account_name || "Unnamed account";
     const scans = getAccountScans(account);
-    const scanMarkup = scans.length
-      ? "<ul class=\"scan-history-list\">" + scans.map((scan) => scanEntryMarkup(scan)).join("") + "</ul>"
-      : "<span class=\"muted-text\">No scans yet</span>";
+    const lastScanDate = scans.length ? relativeTime(scans[0].end_time || scans[0].start_time || scans[0].created_at) : "No scans yet";
+
+    // Get cached status
+    const cachedStatus = getCachedStatus(account.id);
+    const statusDot = cachedStatus ? (cachedStatus.is_connected ? '🟢' : '🔴') : '⚪';
 
     tr.innerHTML =
+      "<td class=\"status-dot\">" + statusDot + "</td>" +
       "<td><span class=\"provider-pill simple\">" + providerLabel + "</span></td>" +
       "<td><strong>" + accountName + "</strong></td>" +
       "<td id='status-" + account.id + "'>" +
       '<span class="status-badge status-pending">Checking...</span>' +
       "</td>" +
-      "<td class=\"scan-history-cell\">" + scanMarkup + "</td>" +
+      "<td class=\"last-scan-cell\">" + lastScanDate + "</td>" +
       "<td class=\"actions-cell\">" +
       "  <div class=\"action-buttons\">" +
+      "    <button type=\"button\" class=\"status-refresh\" data-action=\"refresh\" data-id=\"" + account.id + "\" aria-label=\"Refresh connection status\" title=\"Refresh connection status\">" +
+      "      <span aria-hidden=\"true\">&#x21bb;</span>" +
+      "    </button>" +
       "    <button class=\"btn ghost\" data-action=\"edit\" data-id=\"" + account.id + "\">Edit</button>" +
       "    <button class=\"btn ghost\" data-action=\"delete\" data-id=\"" + account.id + "\">Delete</button>" +
       "  </div>" +
@@ -115,7 +170,7 @@ const renderAccounts = (accounts = accountsCache) => {
   });
 
   accounts.forEach((account) => {
-    checkConnectionStatus(account);
+    checkConnectionStatus(account, false); // false = use cache if available
   });
 };
 
@@ -192,12 +247,23 @@ const handleTableClick = (event) => {
   if (action === "scan") {
     return startScan(targetAccount);
   }
+  if (action === "refresh") {
+    return checkConnectionStatus(targetAccount, true); // true = force refresh
+  }
   if (action === "edit") {
     window.location.href = `add_account.html?cloud_account_id=${encodeURIComponent(id)}`;
     return;
   }
   if (action === "delete") {
-    return deleteAccount(id);
+    const accountName = targetAccount?.account_name || '';
+    const provider = targetAccount?.provider || '';
+    const params = new URLSearchParams({
+      cloud_account_id: id,
+      account_name: accountName,
+      provider,
+    });
+    window.location.href = `delete_cloud_account.html?${params.toString()}`;
+    return;
   }
 };
 
@@ -208,43 +274,142 @@ const init = async () => {
 
   renderAccounts();
 
+  const redirectMessage = getQueryParam('message');
+  const redirectMessageType = getQueryParam('message_type') || 'success';
+  if (redirectMessage) {
+    setMessage(redirectMessage, redirectMessageType);
+    clearMessageQuery();
+  }
+
   accountsTableBody?.addEventListener("click", handleTableClick);
 };
 
 init();
 
+const updateStatusDot = (accountId, isConnected) => {
+  const row = document
+    .querySelector(`#status-${accountId}`)
+    ?.closest("tr");
 
-const checkConnectionStatus = async (account) => {
+  if (!row) return;
+
+  const dotCell = row.querySelector(".status-dot");
+  if (!dotCell) return;
+
+  let svg = "";
+
+  if (isConnected === null) {
+    svg = `
+      <svg width="20" height="20" viewBox="0 0 12 12">
+        <circle cx="6" cy="6" r="5" fill="#9ca3af"/>
+      </svg>`;
+  } 
+  else if (isConnected) {
+    svg = `
+      <svg width="20" height="20" viewBox="0 0 12 12">
+        <circle cx="6" cy="6" r="5" fill="#22c55e"/>
+      </svg>`;
+  } 
+  else {
+    svg = `
+      <svg width="20" height="20" viewBox="0 0 12 12">
+        <circle cx="6" cy="6" r="5" fill="#ef4444"/>
+      </svg>`;
+  }
+
+  dotCell.innerHTML = svg;
+};
+
+const checkConnectionStatus = async (account, forceRefresh = false) => {
+
+  const cell = document.getElementById("status-" + account.id);
+  const cachedStatus = getCachedStatus(account.id);
+
+  // Use cached status
+  if (!forceRefresh && cachedStatus) {
+    if (cell) {
+      cell.innerHTML = cachedStatus.is_connected
+        ? '<span class="status-badge status-connected">Connected</span>'
+        : '<span class="status-badge status-error">Not connected</span>';
+    }
+    updateStatusDot(account.id, cachedStatus.is_connected);
+    return cachedStatus;
+  }
+
+  // Show checking state
+  if (cell) {
+    cell.innerHTML =
+      '<span class="status-badge status-checking">Checking...</span>';
+    updateStatusDot(account.id, null);
+  }
+
+  if (forceRefresh) {
+    showLoader();
+  }
+
   try {
+
     const res = await fetchWithAuth(
       BASE_URL + "/api/accounts/cloud-accounts/" + account.id + "/connection-status/",
       { method: "GET" }
     );
 
-    const data = await res.json();
-    console.log(data)
-
-    const cell = document.getElementById("status-" + account.id);
-    if (!cell) return;
-
-    if (data.is_connected) {
-      cell.innerHTML =
-        '<span class="status-badge status-connected">Connected</span>';
-    } else {
-      cell.innerHTML =
-        '<span class="status-badge status-error">Not connected</span>';
-
-      showConnectionIssue(account, data.connection_issue);
+    if (!res.ok) {
+      throw new Error("API request failed");
     }
+
+    const data = await res.json();
+    console.log("Connection status response:", data);
+
+    // Cache result
+    setCachedStatus(account.id, {
+      is_connected: data.is_connected,
+      connection_issue: data.connection_issue
+    });
+
+    // Update UI immediately
+    if (cell) {
+
+      if (data.is_connected) {
+
+        cell.innerHTML =
+          '<span class="status-badge status-connected">Connected</span>';
+        updateStatusDot(account.id, true);
+
+      } else {
+
+        cell.innerHTML =
+          '<span class="status-badge status-error">Not connected</span>';
+        updateStatusDot(account.id, false);
+
+        if (data.connection_issue) {
+          showConnectionIssue(account, data.connection_issue);
+        }
+      }
+    }
+
+    return data;
+
   } catch (err) {
-    const cell = document.getElementById("status-" + account.id);
+
+    console.error("Connection check error:", err);
+
     if (cell) {
       cell.innerHTML =
         '<span class="status-badge status-error">Check failed</span>';
+      updateStatusDot(account.id, false);
     }
+
+    return null;
+
+  } finally {
+
+    if (forceRefresh) {
+      hideLoader();
+    }
+
   }
 };
-
 const getSolution = (error) => {
 
   if (!error) return "Unknown error.";
@@ -277,7 +442,7 @@ const showConnectionIssue = (account, error) => {
 
   card.innerHTML =
     "<div class='issue-title'>⚠ Connection issue with " +
-    account.provider + " Account Name : "+account.account_name+
+    account.provider + " Account Name : " + account.account_name +
     "</div>" +
     "<div><strong>Error:</strong> " +
     error +

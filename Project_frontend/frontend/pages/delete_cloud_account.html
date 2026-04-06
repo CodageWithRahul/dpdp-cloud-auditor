@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deactivate Cloud Account</title>
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/delete_cloud_account.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div id="shell-nav"></div>
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h2>Deactivate Cloud Account</h2>
+          <p>Review the account details and then type the exact cloud account name below to confirm deactivation.</p>
+        </div>
+      </header>
+
+      <section class="panel delete-panel">
+        <div class="delete-card">
+          <div class="delete-heading">
+            <h3>Confirm account deactivation</h3>
+            <p>This will disable the account for future scans but preserve historical data. Type the exact account name shown below to proceed.</p>
+          </div>
+
+          <div class="account-details" id="account-details">
+            <p class="empty-row">Loading account details...</p>
+          </div>
+
+          <div class="confirmation-box">
+            <label for="confirm-input">Exact text required to deactivate this account:</label>
+            <input id="confirm-input" class="confirm-input" type="text" placeholder="Enter exact account name" autocomplete="off" />
+            <div class="confirm-help" id="confirm-help"></div>
+          </div>
+
+          <div class="delete-actions">
+            <button type="button" class="btn ghost" id="cancel-button">Cancel</button>
+            <button type="button" class="btn danger" id="delete-button" disabled>Deactivate account</button>
+          </div>
+          <div id="delete-message" class="message" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+    <div id="shell-footer"></div>
+  </div>
+
+  <script type="module">
+    import { initShell } from '../js/layout.js';
+    initShell('cloud-accounts');
+  </script>
+  <script type="module" src="../js/delete_cloud_account.js"></script>
+</body>
+</html>

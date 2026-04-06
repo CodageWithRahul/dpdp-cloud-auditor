@@ -28,7 +28,7 @@ class CloudAccountListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        accounts = CloudAccount.objects.filter(user_id=request.user.id)
+        accounts = CloudAccount.objects.filter(user_id=request.user.id, is_active=True)
 
         serializer = self.serializer_class(accounts, many=True)
 
@@ -49,6 +49,48 @@ class CloudAccountListCreateView(APIView):
 
         serializer.save(user=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CloudAccountDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, request, pk):
+        try:
+            return CloudAccount.objects.get(id=pk, user=request.user)
+        except CloudAccount.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        account = self.get_object(request, pk)
+        if not account:
+            return Response({"detail": "Account not found"}, status=404)
+
+        serializer = CloudAccountSerializer(account)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        account = self.get_object(request, pk)
+        if not account:
+            return Response({"detail": "Account not found"}, status=404)
+
+        serializer = CloudAccountSerializer(account, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        account = self.get_object(request, pk)
+        if not account:
+            return Response({"detail": "Account not found"}, status=404)
+
+        # Soft delete (recommended)
+        account.is_active = False
+        account.save()
+
+        return Response({"message": "Account deactivated successfully"}, status=200)
 
 
 class CloudAccountRegionsView(APIView):
