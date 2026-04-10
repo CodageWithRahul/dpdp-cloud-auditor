@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../css/app.css">
   <link rel="stylesheet" href="../css/dashboard.css">
   <link rel="stylesheet" href="../css/accounts.css">
+  
   <link rel="stylesheet" href="../components/loader/loader.css">
 </head>
 <body>
@@ -39,17 +40,17 @@
                 <th>Cloud provider</th>
                 <th>Name</th>
                 <th>Connection</th>
-                <th>Last scan</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="cloud-accounts-table">
               <tr>
-                <td colspan="6" class="empty-row">Retrieving cloud account listings...</td>
+                <td colspan="5" class="empty-row">Retrieving cloud account listings...</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <div id="cloud-accounts-cards" class="accounts-card-list"></div>
         <div id="cloud-accounts-message" class="message" aria-live="polite"></div>
       </section>
       <div id="connection-issues-container" class="issues-container"></div>

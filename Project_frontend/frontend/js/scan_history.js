@@ -1,6 +1,13 @@
 import { BASE_URL, fetchWithAuth, requireAuth } from "./api.js";
 
 const historyBody = document.getElementById("scan-history-list");
+const providerFilter = document.getElementById("scan-provider-filter");
+const dateFromFilter = document.getElementById("scan-date-from");
+const dateToFilter = document.getElementById("scan-date-to");
+const filterButton = document.getElementById("scan-filter-apply");
+const resetButton = document.getElementById("scan-filter-reset");
+
+let historyCache = [];
 
 const statusLabel = (text) => {
   if (!text) return "Completed";
@@ -17,6 +24,13 @@ const statusClass = (label) => {
   return "completed";
 };
 
+const normalizeProvider = (scan) =>
+  (scan.cloud_provider || scan.provider || scan.account_provider || scan.provider_name || "")
+    .toString()
+    .trim();
+
+const getScanDateValue = (scan) => scan.end_time || scan.start_time || scan.created_at || "";
+
 const renderRows = (scans = []) => {
   if (!historyBody) return;
   historyBody.innerHTML = "";
@@ -27,15 +41,14 @@ const renderRows = (scans = []) => {
 
   const sorted = [...scans].sort(
     (a, b) =>
-      new Date(b.end_time || b.start_time || b.created_at || 0) -
-      new Date(a.end_time || a.start_time || a.created_at || 0)
+      new Date(getScanDateValue(b) || 0) -
+      new Date(getScanDateValue(a) || 0)
   );
   sorted.forEach((scan) => {
     const row = document.createElement("tr");
     const jobId = scan.scan_id || scan.scan_job_id || scan.job_id || scan.id || "none";
     const account =  scan.cloud_account || "n/a";
-    const provider =
-      scan.cloud_provider || scan.provider || scan.account_provider || scan.provider_name || "�";
+    const provider = normalizeProvider(scan) || "�";
     const statusText = statusLabel(scan.status);
     const issues = scan.issues_found ?? scan.findings_count ?? scan.findings ?? 0;
     const date = scan.end_time || scan.start_time || scan.created_at || "�";
@@ -75,10 +88,48 @@ const loadHistory = async () => {
     if (!response.ok) {
       throw new Error(payload?.detail || "Unable to load scan history.");
     }
-    renderRows(Array.isArray(payload) ? payload : []);
+    historyCache = Array.isArray(payload) ? payload : [];
+    renderRows(historyCache);
   } catch (error) {
     historyBody.innerHTML = "<tr><td colspan=\"7\" class=\"empty-row\">Failed to load history.</td></tr>";
   }
+};
+
+const matchesProvider = (scan, filterValue) => {
+  if (!filterValue) return true;
+  return normalizeProvider(scan).toLowerCase().includes(filterValue.toLowerCase());
+};
+
+const matchesDateRange = (scan, from, to) => {
+  if (!from && !to) return true;
+  const dateValue = getScanDateValue(scan);
+  if (!dateValue) return false;
+  const timestamp = new Date(dateValue).getTime();
+  if (from && timestamp < from.getTime()) return false;
+  if (to && timestamp > to.getTime()) return false;
+  return true;
+};
+
+const applyFilters = () => {
+  if (!historyCache.length) {
+    renderRows([]);
+    return;
+  }
+
+  const providerQuery = providerFilter?.value?.trim() ?? "";
+  const from = dateFromFilter?.value ? new Date(dateFromFilter.value) : null;
+  const to = dateToFilter?.value ? new Date(dateToFilter.value) : null;
+  if (to) {
+    to.setHours(23, 59, 59, 999);
+  }
+
+  const filtered = historyCache.filter(
+    (scan) =>
+      matchesProvider(scan, providerQuery) &&
+      matchesDateRange(scan, from, to || null)
+  );
+
+  renderRows(filtered);
 };
 
 const handleReportClick = (event) => {
@@ -91,6 +142,13 @@ const init = () => {
   requireAuth();
   loadHistory();
   historyBody?.addEventListener("click", handleReportClick);
+  filterButton?.addEventListener("click", applyFilters);
+  resetButton?.addEventListener("click", () => {
+    providerFilter && (providerFilter.value = "");
+    dateFromFilter && (dateFromFilter.value = "");
+    dateToFilter && (dateToFilter.value = "");
+    renderRows(historyCache);
+  });
 };
 
 init();

@@ -2,10 +2,10 @@ import { BASE_URL, fetchWithAuth, requireAuth } from "./api.js";
 import { showLoader, hideLoader } from "../components/loader/loader.js";
 
 const accountsTableBody = document.getElementById("cloud-accounts-table");
+const accountsCardList = document.getElementById("cloud-accounts-cards");
 const accountsMessage = document.getElementById("cloud-accounts-message");
 
 let accountsCache = [];
-let scanHistory = [];
 
 const CACHE_KEY = 'cloud_accounts_status';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
@@ -48,22 +48,6 @@ const providerNames = {
   GCP: "Google Cloud Platform",
 };
 
-const statusBadge = (status) => {
-  const normalized = (status || "").toString().toLowerCase();
-  if (normalized.includes("not connect") || normalized.includes("disconnected")) return "<span class=\"status-badge status-disconnected\">Not connected</span>";
-  if (normalized.includes("error") || normalized.includes("fail")) return "<span class=\"status-badge status-error\">Error</span>";
-  if (normalized.includes("pending") || normalized.includes("starting")) return "<span class=\"status-badge status-pending\">Pending</span>";
-  return "<span class=\"status-badge status-connected\">Connected</span>";
-};
-
-const statusLabel = (status) => {
-  if (!status) return "Idle";
-  const normalized = status.toString().toLowerCase();
-  if (normalized.includes("running") || normalized.includes("pending")) return "Running";
-  if (normalized.includes("fail") || normalized.includes("error")) return "Failed";
-  return "Completed";
-};
-
 const getQueryParam = (name) => {
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
@@ -85,45 +69,96 @@ const clearMessageQuery = () => {
   window.history.replaceState({}, document.title, url.pathname + url.search);
 };
 
-const relativeTime = (timestamp) => {
-  if (!timestamp) return "No scans yet";
-  const parsed = new Date(timestamp);
-  if (Number.isNaN(parsed.getTime())) return "No scans yet";
-  const diff = Date.now() - parsed.getTime();
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  if (diff < minute) return "moments ago";
-  if (diff < hour) return Math.round(diff / minute) + " minutes ago";
-  if (diff < day) return Math.round(diff / hour) + " hours ago";
-  return Math.round(diff / day) + " days ago";
-};
+const renderAccountCards = (accounts = accountsCache) => {
+  if (!accountsCardList) return;
 
-const matchAccountScan = (account, scan) => {
-  if (!account || !scan) return false;
-  if (account.id && (scan.cloud_account_id === account.id || scan.account_id === account.id)) return true;
-  const normalizedAccountName = (account.account_name || "").toString().toLowerCase().trim();
-  if (!normalizedAccountName) return false;
-  const scanNames = [scan.cloud_account_name, scan.account_name];
-  return scanNames.some((name) => name && name.toString().toLowerCase().trim() === normalizedAccountName);
-};
+  accountsCardList.innerHTML = "";
 
-const getAccountScans = (account) =>
-  scanHistory
-    .filter((scan) => matchAccountScan(account, scan))
-    .sort(
-      (a, b) =>
-        new Date(b.end_time || b.start_time || b.created_at || 0) -
-        new Date(a.end_time || a.start_time || a.created_at || 0)
-    )
-    .slice(0, 3);
+  if (!accounts.length) {
+    accountsCardList.innerHTML =
+      '<p class="empty-row">No cloud accounts configured.</p>';
+    return;
+  }
 
-const scanEntryMarkup = (scan) => {
-  const when = relativeTime(scan.end_time || scan.start_time || scan.created_at || 0);
-  const label = statusLabel(scan.status);
-  const jobId = scan.scan_job_id || scan.scan_id || scan.id;
-  const jobBadge = jobId ? "<span class=\"job-id\">Job #" + jobId + "</span>" : "";
-  return "<li><span>" + when + " � " + label + "</span>" + jobBadge + "</li>";
+  accounts.forEach((account) => {
+    const providerLabel =
+      providerNames[(account.provider || "").toUpperCase()] ||
+      account.provider ||
+      "Cloud";
+
+    const accountName = account.account_name || "Unnamed account";
+
+    const cachedStatus = getCachedStatus(account.id);
+
+    const statusText = cachedStatus
+      ? cachedStatus.is_connected
+        ? "Connected"
+        : "Not connected"
+      : "Checking...";
+
+    const statusClass = cachedStatus
+      ? cachedStatus.is_connected
+        ? "status-connected"
+        : "status-error"
+      : "status-pending";
+
+    const dotClass = cachedStatus
+      ? cachedStatus.is_connected
+        ? "connected"
+        : "error"
+      : "checking";
+
+    const card = document.createElement("article");
+    card.className = "mobile-account-card";
+
+    card.innerHTML = `
+      <header class="mobile-card-header">
+
+        <div class="mobile-card-title">
+          <span class="mobile-status-dot ${dotClass}" id="dot-${account.id}"></span>
+
+          <div>
+            <strong>${accountName}</strong>
+            <span class="provider-pill simple">${providerLabel}</span>
+          </div>
+        </div>
+
+        <div class="mobile-card-top-right">
+
+          <button
+            class="status-refresh"
+            data-action="refresh"
+            data-id="${account.id}"
+            aria-label="Refresh connection status"
+            title="Refresh connection status"
+          >
+            <span aria-hidden="true">&#x21bb;</span>
+          </button>
+
+          <span
+            class="status-badge ${statusClass}"
+            id="status-text-${account.id}"
+          >
+            ${statusText}
+          </span>
+
+        </div>
+
+      </header>
+
+      <div class="mobile-action-buttons">
+        <button class="btn ghost" data-action="edit" data-id="${account.id}">
+          Edit
+        </button>
+
+        <button class="btn ghost" data-action="delete" data-id="${account.id}">
+          Delete
+        </button>
+      </div>
+    `;
+
+    accountsCardList.appendChild(card);
+  });
 };
 
 const renderAccounts = (accounts = accountsCache) => {
@@ -131,7 +166,7 @@ const renderAccounts = (accounts = accountsCache) => {
   accountsTableBody.innerHTML = "";
   if (!accounts.length) {
     const empty = document.createElement("tr");
-    empty.innerHTML = "<td colspan=\"6\" class=\"empty-row\">No cloud accounts configured.</td>";
+    empty.innerHTML = "<td colspan=\"5\" class=\"empty-row\">No cloud accounts configured.</td>";
     accountsTableBody.appendChild(empty);
     return;
   }
@@ -142,9 +177,6 @@ const renderAccounts = (accounts = accountsCache) => {
     const tr = document.createElement("tr");
     const providerLabel = providerNames[(account.provider || "").toUpperCase()] || account.provider || "Cloud";
     const accountName = account.account_name || "Unnamed account";
-    const scans = getAccountScans(account);
-    const lastScanDate = scans.length ? relativeTime(scans[0].end_time || scans[0].start_time || scans[0].created_at) : "No scans yet";
-
     // Get cached status
     const cachedStatus = getCachedStatus(account.id);
     const statusDot = cachedStatus ? (cachedStatus.is_connected ? '🟢' : '🔴') : '⚪';
@@ -156,7 +188,6 @@ const renderAccounts = (accounts = accountsCache) => {
       "<td id='status-" + account.id + "'>" +
       '<span class="status-badge status-pending">Checking...</span>' +
       "</td>" +
-      "<td class=\"last-scan-cell\">" + lastScanDate + "</td>" +
       "<td class=\"actions-cell\">" +
       "  <div class=\"action-buttons\">" +
       "    <button type=\"button\" class=\"status-refresh\" data-action=\"refresh\" data-id=\"" + account.id + "\" aria-label=\"Refresh connection status\" title=\"Refresh connection status\">" +
@@ -172,6 +203,7 @@ const renderAccounts = (accounts = accountsCache) => {
   accounts.forEach((account) => {
     checkConnectionStatus(account, false); // false = use cache if available
   });
+  renderAccountCards(accounts);
 };
 
 const fetchAccounts = async () => {
@@ -186,22 +218,6 @@ const fetchAccounts = async () => {
   } catch (error) {
     setMessage(error?.message || "Failed to load cloud accounts.", "error");
     accountsCache = [];
-    renderAccounts();
-  }
-};
-
-const loadHistory = async () => {
-  try {
-    const response = await fetchWithAuth(BASE_URL + "/api/scanner/scan/history/", { method: "GET" });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload?.detail || "Unable to load scan history.");
-    }
-    scanHistory = Array.isArray(payload) ? payload : [];
-    // renderAccounts();
-  } catch (error) {
-    setMessage(error?.message || "Failed to load scan history.", "error");
-    scanHistory = [];
     renderAccounts();
   }
 };
@@ -270,7 +286,7 @@ const handleTableClick = (event) => {
 const init = async () => {
   requireAuth();
 
-  await Promise.all([fetchAccounts(), loadHistory()]);
+  await fetchAccounts();
 
   renderAccounts();
 
@@ -282,9 +298,23 @@ const init = async () => {
   }
 
   accountsTableBody?.addEventListener("click", handleTableClick);
+  accountsCardList?.addEventListener("click", handleTableClick);
 };
 
 init();
+
+const updateAccountCardStatus = (accountId, state, message) => {
+  const dot = document.getElementById(`dot-${accountId}`);
+  const statusText = document.getElementById(`status-text-${accountId}`);
+  if (dot) {
+    dot.className = `mobile-status-dot ${state}`;
+  }
+  if (statusText) {
+    const text = state === 'connected' ? 'Connected' : state === 'checking' ? 'Checking...' : message || 'Not connected';
+    statusText.textContent = text;
+    statusText.className = `status-text ${state === 'connected' ? 'success' : state === 'checking' ? 'checking' : 'error'}`;
+  }
+};
 
 const updateStatusDot = (accountId, isConnected) => {
   const row = document
@@ -303,13 +333,13 @@ const updateStatusDot = (accountId, isConnected) => {
       <svg width="20" height="20" viewBox="0 0 12 12">
         <circle cx="6" cy="6" r="5" fill="#9ca3af"/>
       </svg>`;
-  } 
+  }
   else if (isConnected) {
     svg = `
       <svg width="20" height="20" viewBox="0 0 12 12">
         <circle cx="6" cy="6" r="5" fill="#22c55e"/>
       </svg>`;
-  } 
+  }
   else {
     svg = `
       <svg width="20" height="20" viewBox="0 0 12 12">
@@ -333,6 +363,7 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
         : '<span class="status-badge status-error">Not connected</span>';
     }
     updateStatusDot(account.id, cachedStatus.is_connected);
+    updateAccountCardStatus(account.id, cachedStatus.is_connected ? 'connected' : 'error', cachedStatus.connection_issue);
     return cachedStatus;
   }
 
@@ -342,6 +373,7 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
       '<span class="status-badge status-checking">Checking...</span>';
     updateStatusDot(account.id, null);
   }
+  updateAccountCardStatus(account.id, 'checking');
 
   if (forceRefresh) {
     showLoader();
@@ -375,6 +407,7 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
         cell.innerHTML =
           '<span class="status-badge status-connected">Connected</span>';
         updateStatusDot(account.id, true);
+        updateAccountCardStatus(account.id, 'connected');
 
       } else {
 
@@ -385,6 +418,7 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
         if (data.connection_issue) {
           showConnectionIssue(account, data.connection_issue);
         }
+        updateAccountCardStatus(account.id, 'error', data.connection_issue);
       }
     }
 
@@ -399,6 +433,7 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
         '<span class="status-badge status-error">Check failed</span>';
       updateStatusDot(account.id, false);
     }
+    updateAccountCardStatus(account.id, 'error', 'Check failed');
 
     return null;
 

@@ -62,6 +62,20 @@ class CloudAccountSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"credentials": f"{field} is required for {provider}"}
                 )
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if self.instance is None and user and user.is_authenticated:
+            existing = CloudAccount.objects.filter(
+                user=user, provider=provider, is_active=True
+            )
+            for account in existing:
+                if (account.credentials or {}) == credentials:
+                    raise serializers.ValidationError(
+                        {"credentials": "This cloud account is already added."}
+                    )
+
         return attrs
 
     # def get_connection_status(self, obj):
@@ -80,13 +94,33 @@ class CloudAccountSerializer(serializers.ModelSerializer):
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ["username", "email", "password"]
+        fields = ["full_name", "email", "password"]
         extra_kwargs = {"password": {"write_only": True}}
 
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        normalized = value.lower()
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError(
+                "An account with this email already exists. | Try login instead."
+            )
+        return normalized
+
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
+        full_name = validated_data.pop("full_name", "")
+        email = validated_data.get("email")
+        password = validated_data.get("password")
+        user = User.objects.create_user(username=email, email=email, password=password)
+        if full_name:
+            names = full_name.split(None, 1)
+            user.first_name = names[0]
+            user.last_name = names[1] if len(names) > 1 else ""
+            user.save()
         return user
 
 
@@ -94,3 +128,35 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = "__all__"
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ("email", "full_name")
+
+    def validate_email(self, value):
+        normalized = value.lower()
+        user = getattr(self, "instance", None)
+        if User.objects.filter(email__iexact=normalized).exclude(id=user.id if user else None).exists():
+            raise serializers.ValidationError("This email is already taken.")
+        return normalized
+
+    def update(self, instance, validated_data):
+        full_name = validated_data.pop("full_name", None)
+        email = validated_data.get("email")
+
+        if full_name is not None:
+            names = full_name.strip().split(None, 1)
+            instance.first_name = names[0] if names else ""
+            instance.last_name = names[1] if len(names) > 1 else ""
+
+        if email:
+            normalized_email = email.lower()
+            instance.email = normalized_email
+            instance.username = normalized_email
+
+        instance.save()
+        return instance

@@ -21,12 +21,18 @@ const handleRegistration = async (event) => {
   event.preventDefault();
   if (!registerForm) return;
 
-  const username = document.getElementById('reg-username')?.value.trim();
+  const fullName = document.getElementById('reg-full-name')?.value.trim();
   const email = document.getElementById('reg-email')?.value.trim();
   const password = document.getElementById('reg-password')?.value;
+  const confirmPassword = document.getElementById('reg-password-confirm')?.value;
 
-  if (!username || !email || !password) {
-    setMessage(registerMessage, 'All fields are required.');
+  if (!fullName || !email || !password || !confirmPassword) {
+    setMessage(registerMessage, 'Full name, email, password, and confirmation are required.');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setMessage(registerMessage, 'Passwords do not match.');
     return;
   }
 
@@ -37,19 +43,27 @@ const handleRegistration = async (event) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ full_name: fullName, email, password }),
     });
 
-    const payload = await response.json();
+    const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(payload.detail || 'Unable to register at this time.');
+      let errorMessage = payload?.detail;
+      if (!errorMessage && payload && typeof payload === 'object') {
+        const firstKey = Object.keys(payload)[0];
+        const errorValue = payload[firstKey];
+        if (Array.isArray(errorValue)) {
+          errorMessage = errorValue.join(' ');
+        } else if (typeof errorValue === 'string') {
+          errorMessage = errorValue;
+        }
+      }
+      throw new Error(errorMessage || 'Unable to register at this time.');
     }
 
     setMessage(registerMessage, 'Account created! Redirecting to login...', 'success');
-    setTimeout(() => {
-      window.location.href = 'login.html';
-    }, 800);
+    window.location.href = 'login.html';
   } catch (error) {
     setMessage(registerMessage, error?.message || 'Registration failed.');
   } finally {

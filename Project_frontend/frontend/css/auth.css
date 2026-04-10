@@ -28,6 +28,7 @@
   font-size: 1.9rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .auth-card p {
@@ -148,6 +149,16 @@
   flex: 1;
 }
 
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.75);
+  color: #e2e8f0;
+}
+
+.btn.ghost:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
 .message {
   font-size: 0.9rem;
   min-height: 20px;
@@ -208,4 +219,51 @@
   .form-actions {
     flex-direction: column;
   }
+}
+
+.auth-link {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.auth-link a {
+  color: #cbd5f5;
+  text-decoration: none;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.auth-header h1 {
+  margin-bottom: 0.35rem;
+}
+
+.forgot-row {
+  text-align: left;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-link--bottom {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.auth-link__action {
+  text-decoration: underline;
+  font-weight: 600;
 }

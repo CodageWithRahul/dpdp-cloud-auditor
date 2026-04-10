@@ -330,22 +330,13 @@ const buildAccountCard = (account) => {
         <option value="">Loading regions...</option>
       </select>
     </div>`;
-  const recent = getAccountScans(account);
   const lastScanTimestamp =
-    recent[0]?.end_time || recent[0]?.start_time || recent[0]?.created_at || account.last_scan_at;
+    account.last_scan_at || account.scan_date || account.last_scan_date;
   const lastScanText = lastScanTimestamp ? formatDateTime(lastScanTimestamp) : 'No scans yet';
   const connectionError = account.connection_issue || 'Unable to connect to cloud account';
   const providerLabel = account.provider || 'Cloud';
   const providerBadge = providerLabel.toUpperCase();
   const accountTitle = account.account_name || 'Unnamed account';
-  const recentMarkup = recent.length
-    ? `<ul class="recent-scans">${recent
-        .map(
-          (entry) =>
-            `<li>${relativeTime(entry.end_time || entry.start_time || entry.created_at || 0)} - ${statusLabel(entry.status)}</li>`
-        )
-        .join('')}</ul>`
-    : '<p class="empty-row">No recent scans</p>';
   card.innerHTML = `
   <div class="connection-status-group">
     <button type="button" class="status-refresh" data-action="refresh-connection" aria-label="Refresh connection status" title="Refresh connection status">
@@ -363,13 +354,8 @@ const buildAccountCard = (account) => {
       </div>
     </header>
     <div class="account-card__info">
-      <span class="last-scan-label">Last scan: ${lastScanText}</span>
       ${regionMarkup}
     </div>
-    <section class="recent-scans-section">
-      <p class="section-label">Recent scans</p>
-      ${recentMarkup}
-    </section>
     <div class="connection-error" style="display:none;">
       <strong>Error:</strong>
       <span class="connection-error__message">${connectionError}</span>

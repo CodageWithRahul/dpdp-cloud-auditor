@@ -7,7 +7,6 @@ let providerSelect;
 let nameInput;
 let accessInput;
 let secretInput;
-let sessionInput;
 let tenantInput;
 let clientInput;
 let clientSecretInput;
@@ -109,7 +108,6 @@ const handleFormSubmit = async (event) => {
   if (provider === 'AWS') {
     const accessKey = accessInput?.value.trim();
     const secretKey = secretInput?.value.trim();
-    const sessionToken = sessionInput?.value.trim();
 
     if (!accessKey || !secretKey) {
       if (!editingAccountId) {
@@ -118,7 +116,6 @@ const handleFormSubmit = async (event) => {
       }
     } else {
       credentials = { access_key: accessKey, secret_key: secretKey };
-      if (sessionToken) credentials.session_token = sessionToken;
       hasCredentialInput = true;
     }
   } else if (provider === 'AZURE') {
@@ -195,7 +192,19 @@ const handleFormSubmit = async (event) => {
 
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(result?.detail || 'Unable to save account.');
+      let errorMessage = result?.error || result?.detail;
+
+      if (!errorMessage && result && typeof result === 'object') {
+        const errorKey = Object.keys(result)[0];
+        const errorValue = result[errorKey];
+        if (Array.isArray(errorValue)) {
+          errorMessage = errorValue.join(' ');
+        } else if (typeof errorValue === 'string') {
+          errorMessage = errorValue;
+        }
+      }
+
+      throw new Error(errorMessage || 'Unable to save account.');
     }
 
     const successMessage = editingAccountId
@@ -203,10 +212,27 @@ const handleFormSubmit = async (event) => {
       : 'Account verified and saved successfully!';
     setMessage(successMessage, 'success');
     setTimeout(() => {
-      window.location.href = 'cloud_accounts.html';
-    }, 900);
+      window.location.href ='dashboard.html';
+    }, 100);
   } catch (error) {
-    setMessage(error?.message || 'Connection failed. Check credentials.');
+    // Provide user-friendly error messages
+    let userMessage = error?.message || 'Connection failed. Check credentials.';
+    
+    // Enhance error messages for common credential verification failures
+    if (userMessage.includes('InvalidClientError')) {
+      userMessage = 'Credential verification failed. Please check your credentials and try again.';
+    } else if (userMessage.includes('UnauthorizedException') || userMessage.includes('InvalidAction')) {
+      userMessage = 'Credential verification failed. Ensure your credentials have proper permissions.';
+    } else if (userMessage.includes('Connection') || userMessage.includes('Connection refused')) {
+      userMessage = 'Unable to connect to your cloud provider. Check your credentials and internet connection.';
+    } else if (userMessage.toLowerCase().includes('timeout')) {
+      userMessage = 'Request timeout. Please check your credentials and try again.';
+    } else if (!userMessage.includes('required') && !userMessage.includes('must be')) {
+      // For backend validation errors, prefix with context
+      userMessage = `Credential verification failedd: ${userMessage}`;
+    }
+    
+    setMessage(userMessage);
   } finally {
     hideLoader();
   }
@@ -219,7 +245,6 @@ const initDomRefs = () => {
   nameInput = document.getElementById('account-name');
   accessInput = document.getElementById('access-key');
   secretInput = document.getElementById('secret-key');
-  sessionInput = document.getElementById('session-token');
   tenantInput = document.getElementById('tenant-id');
   clientInput = document.getElementById('client-id');
   clientSecretInput = document.getElementById('client-secret');

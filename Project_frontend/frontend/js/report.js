@@ -2,6 +2,7 @@ import { BASE_URL, fetchWithAuth, requireAuth } from './api.js';
 
 const REPORT_BASE = `${BASE_URL}/api/reports`;
 const CLOUD_REPORT_BASE = `${BASE_URL}/api/reports/cloud-accounts`;
+const reportDetails = document.getElementById('report-details');
 const scanJobInput = document.getElementById('scan-job-id');
 const loadReportButton = document.getElementById('load-report-button');
 const summaryGrid = document.getElementById('summary-grid');
@@ -30,6 +31,10 @@ const backButton = document.getElementById('back-to-dashboard');
 const severityPieCanvas = document.getElementById('severity-pie-chart');
 const severityPieLegend = document.getElementById('severity-pie-legend');
 const DEFAULT_REPORT_TITLE = reportTitle?.textContent || 'Scan Summary & Insights';
+const LOG_POLL_INTERVAL = 4000;
+const MAX_LOG_POLL_ATTEMPTS = 6;
+let logPollTimer = null;
+let logPollAttempts = 0;
 let currentAccountId = null;
 let currentAccountName = null;
 let currentProviderName = null;
@@ -88,12 +93,28 @@ const SEVERITY_COLORS = {
   info: '#60a5fa',
 };
 
+const showReportDetails = () => {
+  if (!reportDetails) return;
+  reportDetails.removeAttribute('hidden');
+};
+
+const hideReportDetails = () => {
+  if (!reportDetails) return;
+  reportDetails.setAttribute('hidden', '');
+};
+
 const setMessage = (text = '', type = 'info') => {
   if (!reportMessage) return;
   reportMessage.textContent = text;
   reportMessage.className = 'message';
   if (!text) return;
-  reportMessage.classList.add(type === 'success' ? 'success' : 'error');
+  if (type === 'success') {
+    reportMessage.classList.add('success');
+  } else if (type === 'error') {
+    reportMessage.classList.add('error');
+  } else {
+    reportMessage.classList.add('idle');
+  }
 };
 
 const setLoading = (isLoading) => {
@@ -206,15 +227,52 @@ const fetchScanLogs = async (jobId) => {
   throw new Error('Scan log archive is not available for this job.');
 };
 
-const loadReportLogs = async (jobId) => {
-  if (!reportLogStream) return;
-  reportLogStream.innerHTML = '<p class="muted">Loading scan logs...</p>';
+const loadReportLogs = async (jobId, { silent = false } = {}) => {
+  if (!reportLogStream || !jobId) return [];
+  if (!silent) {
+    reportLogStream.innerHTML = '<p class="muted">Loading scan logs...</p>';
+  }
   try {
     const logs = await fetchScanLogs(jobId);
     renderReportLogs(logs);
+    return Array.isArray(logs) ? logs : [];
   } catch (error) {
-    reportLogStream.innerHTML = `<p class="muted">${error?.message || 'Unable to load scan logs.'}</p>`;
+    if (!silent) {
+      reportLogStream.innerHTML = `<p class="muted">${error?.message || 'Unable to load scan logs.'}</p>`;
+    }
+    return [];
   }
+};
+
+const stopLogPolling = () => {
+  if (logPollTimer) {
+    clearTimeout(logPollTimer);
+    logPollTimer = null;
+  }
+  logPollAttempts = 0;
+};
+
+const ensureReportLogs = async (jobId, { silent = false } = {}) => {
+  if (!jobId) return;
+  logPollAttempts += 1;
+  const logs = await loadReportLogs(jobId, { silent });
+  const hasLogs = Array.isArray(logs) && logs.length > 0;
+  if (!hasLogs && logPollAttempts < MAX_LOG_POLL_ATTEMPTS) {
+    scheduleLogRetry(jobId);
+  }
+};
+
+const scheduleLogRetry = (jobId) => {
+  if (logPollTimer) {
+    clearTimeout(logPollTimer);
+  }
+  logPollTimer = window.setTimeout(() => ensureReportLogs(jobId, { silent: true }), LOG_POLL_INTERVAL);
+};
+
+const startLogPolling = (jobId) => {
+  stopLogPolling();
+  if (!jobId) return;
+  ensureReportLogs(jobId);
 };
 
 const computeRiskScore = (findings = []) => {
@@ -484,6 +542,7 @@ const updateSafetyLabel = (safe) => {
 };
 
 const clearReport = () => {
+  stopLogPolling();
   renderSummary(null);
   renderSeverityChart([]);
   renderSeverityPie([]);
@@ -492,17 +551,25 @@ const clearReport = () => {
   renderServices([]);
   clearReportLogs();
   resetMetadata();
+  hideReportDetails();
 };
 
 const fetchJson = async (url) => {
-  const response = await fetchWithAuth(url, { method: 'GET' });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload) {
-    const message = payload?.detail || payload?.message || 'Unable to load report data.';
-    throw new Error(message);
-  }
-  return payload;
-};
+    const response = await fetchWithAuth(url, { method: 'GET' });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = payload?.detail || payload?.message || 'Unable to load report data.';
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    if (payload === null) {
+      const error = new Error('Unable to load report data.');
+      error.status = response.status;
+      throw error;
+    }
+    return payload;
+  };
 
 const updateReportMetadata = ({ jobId = null, downloadAvailable = false, timestamp = null } = {}) => {
   if (reportJobId) {
@@ -627,63 +694,49 @@ const downloadReport = async (format) => {
 };
 
 const loadReport = async (jobId) => {
-  if (!jobId) return;
-  currentAccountId = null;
-  lastLoadedJobId = jobId;
-  setAccountMetadataOverrides({ name: null, provider: null });
-  clearReport();
-  setMessage('');
-  setLoading(true);
-  try {
-    const [summaryResult, servicesResult, findingsResult] = await Promise.allSettled([
-      fetchJson(`${REPORT_BASE}/${jobId}/summary/`),
-      fetchJson(`${REPORT_BASE}/${jobId}/services/`),
-      fetchJson(`${REPORT_BASE}/${jobId}/results/`),
-    ]);
-
-    let services = [];
-    let findings = [];
-    let summaryLogs = [];
-    if (summaryResult.status === 'fulfilled') {
+    if (!jobId) return;
+    currentAccountId = null;
+    lastLoadedJobId = jobId;
+    setAccountMetadataOverrides({ name: null, provider: null });
+    clearReport();
+    setMessage('');
+    setLoading(true);
+    try {
+      const [summaryResult, servicesResult, findingsResult] = await Promise.allSettled([
+        fetchJson(`${REPORT_BASE}/${jobId}/summary/`),
+        fetchJson(`${REPORT_BASE}/${jobId}/services/`),
+        fetchJson(`${REPORT_BASE}/${jobId}/results/`),
+      ]);
+      if (summaryResult.status !== 'fulfilled') {
+        throw summaryResult.reason;
+      }
+      const services = servicesResult.status === 'fulfilled' ? servicesResult.value : [];
+      const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
+      const summaryLogs = normalizeScanLogPayload(summaryResult.value);
       renderSummary(summaryResult.value);
       setMetadataFromSummary(summaryResult.value);
-      summaryLogs = normalizeScanLogPayload(summaryResult.value);
-    }
-    if (servicesResult.status === 'fulfilled') {
-      services = servicesResult.value;
-    }
-    if (findingsResult.status === 'fulfilled') {
-      findings = findingsResult.value;
-    }
-    renderSeverityChart(findings);
-    renderSeverityPie(findings);
-    renderServiceChart(services);
-    renderResults(findings);
-    renderServices(services);
-    renderReportOverview(findings);
-    if (summaryLogs.length) {
+      renderSeverityChart(findings);
+      renderSeverityPie(findings);
+      renderServiceChart(services);
+      renderResults(findings);
+      renderServices(services);
+      renderReportOverview(findings);
       renderReportLogs(summaryLogs);
-    } else {
-      await loadReportLogs(jobId);
-    }
-
-    const errors = [summaryResult, servicesResult, findingsResult]
-      .filter((entry) => entry.status === 'rejected')
-      .map((entry) => entry.reason?.message)
-      .filter(Boolean);
-
-    if (errors.length) {
-      setMessage(errors.join(' '));
-    } else {
+      startLogPolling(jobId);
       setMessage(`Loaded report for scan job #${jobId}.`, 'success');
+      updateReportMetadata({ jobId, downloadAvailable: true, timestamp: new Date().toLocaleString() });
+      showReportDetails();
+    } catch (error) {
+      const unsupported = error?.status === 404 || /not found/i.test(error?.message || '');
+      const message = unsupported
+        ? 'No scan was found with that scan job ID.'
+        : error?.message || 'Unable to load report.';
+      setMessage(message, 'error');
+      hideReportDetails();
+    } finally {
+      setLoading(false);
     }
-    updateReportMetadata({ jobId, downloadAvailable: true, timestamp: new Date().toLocaleString() });
-  } catch (error) {
-    setMessage(error?.message || 'Unable to load report.', 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
 const loadAccountReport = async (accountId, { scanJobId, accountName, providerName } = {}) => {
   if (!accountId) return;
@@ -710,7 +763,7 @@ const loadAccountReport = async (accountId, { scanJobId, accountName, providerNa
     renderReportOverview(entries);
     setMetadataFromEntries(entries, { jobId: scanJobId });
     if (scanJobId) {
-      await loadReportLogs(scanJobId);
+      startLogPolling(scanJobId);
     } else {
       clearReportLogs();
     }
@@ -727,8 +780,10 @@ const loadAccountReport = async (accountId, { scanJobId, accountName, providerNa
     if (scanJobId) {
       saveJobId(scanJobId);
     }
+    showReportDetails();
   } catch (error) {
     setMessage(error?.message || 'Unable to load account results.', 'error');
+    hideReportDetails();
   } finally {
     setLoading(false);
   }
@@ -774,6 +829,8 @@ const saveJobId = (jobId) => {
 };
 
 const init = async () => {
+  hideReportDetails();
+  setMessage('Enter a scan ID to view the report.', 'info');
   requireAuth();
   loadReportButton?.addEventListener('click', handleLoad);
   scanJobInput?.addEventListener('keydown', (event) => {
@@ -793,6 +850,7 @@ const init = async () => {
   const accountIdParam = params.get('cloud_account_id');
   const accountNameParam = params.get('account_name');
   const providerParam = params.get('provider');
+  const persisted = normalizeJobId(storedJobId());
   if (accountIdParam) {
     currentAccountId = accountIdParam;
     if (scanJobInput && queryId) {
@@ -805,13 +863,20 @@ const init = async () => {
     });
     return;
   }
-  const persisted = normalizeJobId(storedJobId());
-  const initialJob = queryId || persisted;
-  if (initialJob) {
-    scanJobInput && (scanJobInput.value = initialJob);
-    await loadReport(initialJob);
-    saveJobId(initialJob);
+  if (queryId) {
+    scanJobInput && (scanJobInput.value = queryId);
+    await loadReport(queryId);
+    return;
+  }
+  if (persisted) {
+    scanJobInput && (scanJobInput.value = persisted);
+  }
+
+  // Always keep the search input empty on initial page load so only the placeholder is visible.
+  if (scanJobInput) {
+    scanJobInput.value = '';
   }
 };
+
 
 init();

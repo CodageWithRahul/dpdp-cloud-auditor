@@ -20,6 +20,7 @@
   background: #fff3cd;
   color: #856404;
 }
+
 .section-head .btn {
   text-decoration: none;
   white-space: nowrap;
@@ -138,6 +139,218 @@
   color: #444;
   font-size: 14px;
 }
+
+.accounts-card-list {
+  display: none;
+  margin-top: 1rem;
+}
+
+
+
+/* ---------- MOBILE VIEW ---------- */
+
+.accounts-card-list {
+  display: none;
+}
+
+/* Switch table to cards */
+@media (max-width: 900px) {
+
+  .table-wrapper {
+    display: none;
+  }
+
+  .accounts-card-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* CARD */
+
+  .mobile-account-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    border-radius: 16px;
+    border: 1px solid rgba(148,163,184,0.25);
+    background: rgba(15,23,42,0.95);
+    padding: 1rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+  }
+
+  /* HEADER */
+
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mobile-card-title strong {
+    font-size: 0.95rem;
+  }
+
+  /* STATUS DOT */
+
+  .mobile-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+  }
+
+  .mobile-status-dot.connected {
+    background: #22c55e;
+  }
+
+  .mobile-status-dot.error {
+    background: #ef4444;
+  }
+
+  .mobile-status-dot.checking {
+    background: #facc15;
+  }
+
+  /* RIGHT SIDE */
+
+  .mobile-card-top-right {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .status-text {
+    font-size: 0.8rem;
+    color: rgba(226,232,240,0.8);
+  }
+
+  /* ACTION BUTTONS */
+
+  .mobile-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-action-buttons .btn,
+  .mobile-action-buttons .status-refresh {
+    flex: 1 1 auto;
+    min-width: 90px;
+  }
+
+  /* REFRESH BUTTON */
+
+  .status-refresh {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,0.35);
+    background: rgba(15,23,42,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+}
+
+/* .mobile-account-card {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .table-wrapper {
+    display: none;
+  }
+
+  .accounts-card-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .mobile-account-card {
+    display: block;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(6, 11, 26, 0.95);
+    padding: 1rem 1.2rem;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+    gap: 0.75rem;
+  }
+
+  .mobile-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 50px;
+  }
+
+  .mobile-card-header strong {
+    font-size: 1rem;
+  }
+
+  .mobile-card-top-right {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .mobile-card-top-right .status-text {
+    font-size: 0.85rem;
+    color: rgba(226, 232, 240, 0.8);
+  }
+
+  .mobile-status-dot {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .mobile-status-dot.connected {
+    background: #22c55e;
+  }
+
+  .mobile-status-dot.error {
+    background: #ef4444;
+  }
+
+  .mobile-status-dot.checking {
+    background: #facc15;
+  }
+
+  .mobile-card-header .provider-pill {
+    margin-left: 0;
+  }
+
+  .mobile-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-action-buttons .btn,
+  .mobile-action-buttons .status-refresh {
+    flex: 1;
+  }
+
+  .mobile-action-buttons .status-refresh {
+    min-width: 50px;
+  }
+}
+
 .provider-pill,
 .status-badge {
   display: inline-flex;
@@ -211,6 +424,7 @@
 }
 
 @media (max-width: 720px) {
+
   .list-table th,
   .list-table td {
     font-size: 0.85rem;
@@ -220,4 +434,4 @@
   .action-buttons {
     justify-content: flex-start;
   }
-}
+} */

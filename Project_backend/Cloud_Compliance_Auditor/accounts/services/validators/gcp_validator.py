@@ -32,4 +32,4 @@ def validate_credentials(credentials):
         return False, str(exc)
 
     except Exception as exc:
-        return False, str(exc)
+        return False, str("Check Credentials")

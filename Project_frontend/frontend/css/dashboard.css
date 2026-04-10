@@ -130,19 +130,26 @@
 
 .accounts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-top: 1rem;
 }
 
+@media (min-width: 900px) {
+  .accounts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .account-card {
-  background: rgba(4, 7, 18, 0.85);
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  padding: 1.2rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 64, 0.85));
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  box-shadow: 0 25px 45px rgba(2, 6, 23, 0.5);
 }
 
 .account-card h4 {
@@ -185,7 +192,12 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.85rem;
-  color: rgba(226, 232, 240, 0.7);
+  color: rgba(226, 232, 240, 0.85);
+  align-items: center;
+}
+
+.account-card__info .region-control {
+  flex: 1;
 }
 
 .last-scan-label,

@@ -31,6 +31,94 @@
   overflow-x: auto;
 }
 
+.table-scroll {
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.table-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 4px;
+}
+
+.scan-filter {
+      display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-end;
+    justify-content: center;
+    /* padding: 0.75rem 0.8rem; */
+    margin: 0.75rem auto 0;
+    width: min(880px, 100%);
+   
+}
+
+.scan-filter__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.85);
+  min-width: 140px;
+}
+
+.scan-filter__field input {
+  width: 180px;
+    padding: 0.55rem 5px;
+    border-radius: 7px;
+    /* border: none; */
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: transparent;
+    color: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scan-filter__field input:focus {
+  outline: none;
+  border-bottom-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 4px 0 0 rgba(59, 130, 246, 0.2);
+}
+
+.scan-filter__field label {
+  letter-spacing: 0.18em;
+}
+
+.scan-filter__field input::placeholder {
+  color: rgba(226, 232, 240, 0.5);
+}
+
+
+.scan-filter__field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+
+
+.scan-filter__actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.scan-filter__actions .btn {
+  padding: 0.55rem 1.1rem;
+}
+
+.panel .section-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
 .list-table th,
 .list-table td {
   font-size: 0.85rem;
@@ -71,6 +159,11 @@
 
 .list-table tbody tr:hover {
   background: rgba(59, 130, 246, 0.07);
+}
+
+.list-table th,
+.list-table td {
+  text-align: center;
 }
 
 .list-table td {

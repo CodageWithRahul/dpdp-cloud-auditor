@@ -13,6 +13,11 @@ const buildNav = (active) => `
     <p class="eyebrow">Security Console</p>
     <h1>Cloud Auditor</h1>
   </div>
+  <button class="nav-toggle" type="button" aria-label="Toggle navigation">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
   <nav class="primary-nav">
     ${navLinks
       .map(
@@ -20,6 +25,10 @@ const buildNav = (active) => `
           `<a class="nav-link${link.id === active ? ' active' : ''}" href="${link.href}">${link.label}</a>`
       )
       .join('')}
+    <div class="nav-user-mobile">
+      <a id="user-name-mobile" class="user-link" href="user_details.html">Security Analyst</a>
+      <button class="btn ghost" id="logout-button-mobile">Logout</button>
+    </div>
   </nav>
   <div class="nav-user">
     <div>
@@ -43,10 +52,15 @@ const renderFooter = () => {
 };
 
 const attachLogout = () => {
-  const button = document.getElementById('logout-button');
-  button?.addEventListener('click', () => {
-    clearTokens();
-    window.location.href = 'login.html';
+  const buttons = [
+    document.getElementById('logout-button'),
+    document.getElementById('logout-button-mobile'),
+  ];
+  buttons.forEach((button) => {
+    button?.addEventListener('click', () => {
+      clearTokens();
+      window.location.href = 'login.html';
+    });
   });
 };
 
@@ -56,9 +70,12 @@ const formatDisplayName = (payload) => {
 };
 
 const loadUserInfo = async () => {
-  const nameEl = document.getElementById('user-name');
+  const nameEls = [
+    document.getElementById('user-name'),
+    document.getElementById('user-name-mobile'),
+  ];
   const roleEl = document.getElementById('user-role');
-  if (!nameEl && !roleEl) return;
+  if (!nameEls.some(Boolean) && !roleEl) return;
 
   const endpoints = [
     `${BASE_URL}/api/accounts/me/`,
@@ -72,7 +89,11 @@ const loadUserInfo = async () => {
       const payload = await response.json().catch(() => null);
       if (!response.ok) continue;
       const displayName = formatDisplayName(payload);
-      nameEl && (nameEl.textContent = displayName);
+      nameEls.forEach((el) => {
+        if (el) {
+          el.textContent = displayName;
+        }
+      });
       roleEl && (roleEl.textContent = payload?.role || 'Operator');
       return;
     } catch (error) {
@@ -80,8 +101,31 @@ const loadUserInfo = async () => {
     }
   }
 
-  nameEl && (nameEl.textContent = 'Security Analyst');
+  nameEls.forEach((el) => {
+    if (el) {
+      el.textContent = 'Security Analyst';
+    }
+  });
   roleEl && (roleEl.textContent = 'Operator');
+};
+
+const closeNavMenu = () => {
+  const header = document.querySelector('.top-nav');
+  header?.classList.remove('nav-open');
+};
+
+const attachNavToggle = () => {
+  const header = document.querySelector('.top-nav');
+  const toggle = document.querySelector('.nav-toggle');
+  const nav = document.querySelector('.primary-nav');
+  toggle?.addEventListener('click', () => {
+    header?.classList.toggle('nav-open');
+  });
+  nav?.querySelectorAll('a.nav-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      closeNavMenu();
+    });
+  });
 };
 
 export const initShell = (activePage = 'dashboard') => {
@@ -89,4 +133,5 @@ export const initShell = (activePage = 'dashboard') => {
   renderFooter();
   loadUserInfo();
   attachLogout();
+  attachNavToggle();
 };

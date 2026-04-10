@@ -3,31 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login Â· DPDP Cloud Auditor</title>
+  <title>Login · DPDP Cloud Auditor</title>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/auth.css">
   <link rel="stylesheet" href="../components/loader/loader.css">
 </head>
 <body class="page">
   <main class="auth-card">
-    <h1>DPDP Cloud Auditor</h1>
-    <p>Sign in to access your cloud security data.</p>
+    <div class="auth-header">
+      <h1>DPDP Cloud Auditor</h1>
+      <p>Sign in to access your cloud security data.</p>
+    </div>
     <form id="login-form" class="form-grid" novalidate>
-      <label for="username">Username</label>
-      <input class="form-control" type="text" id="username" autocomplete="username" required>
+      <label for="username">Email</label>
+      <input class="form-control" type="email" id="username" autocomplete="username" placeholder="Enter email" required>
 
       <label for="password">Password</label>
       <div class="input-with-toggle">
-        <input class="form-control" type="password" id="password" autocomplete="current-password" required>
+        <input class="form-control" type="password" id="password" autocomplete="current-password" placeholder="Enter password" required>
         <button type="button" class="password-toggle" data-toggle-for="password" aria-label="Show password">Show</button>
+      </div>
+
+      <div class="forgot-row">
+        <a href="forgot-password.html">Forgot your password?</a>
       </div>
 
       <div id="login-message" class="message" aria-live="polite"></div>
 
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Login</button>
-        <a class="btn btn-secondary" role="button" href="register.html">Create account</a>
-      </div>
+      <button class="btn btn-primary btn-full" type="submit">Login</button>
+
+      <p class="auth-link auth-link--bottom">
+        Don&#39;t have an account? <a href="register.html">Create account</a>
+      </p>
     </form>
   </main>
   <script type="module" src="../components/loader/loader.js"></script>

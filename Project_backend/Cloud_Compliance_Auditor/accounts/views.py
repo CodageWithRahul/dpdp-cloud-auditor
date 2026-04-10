@@ -1,13 +1,21 @@
+from django.conf import settings
+from django.contrib.auth.forms import PasswordResetForm
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.generics import RetrieveUpdateAPIView
 from .services.validator_selector import validate_credentials
 from .services.region_selector import get_regions
 
 
 from .models import CloudAccount
-from .serializers import CloudAccountSerializer, UserRegisterSerializer, UserSerializer
+from .serializers import (
+    CloudAccountSerializer,
+    UserRegisterSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
+)
 
 
 class RegisterView(APIView):
@@ -17,7 +25,12 @@ class RegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
 
         if serializer.is_valid():
+            # email = request.data.get("email")
+            # user = serializer.save(commit=False)
+            # user.username = email
+            # user.save()
             serializer.save()
+
             return Response({"message": "User created successfully"}, status=201)
 
         return Response(serializer.errors, status=400)
@@ -35,7 +48,7 @@ class CloudAccountListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
+        serializer = self.serializer_class(data=request.data, context={"request": request})
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -73,7 +86,9 @@ class CloudAccountDetailView(APIView):
         if not account:
             return Response({"detail": "Account not found"}, status=404)
 
-        serializer = CloudAccountSerializer(account, data=request.data, partial=True)
+        serializer = CloudAccountSerializer(
+            account, data=request.data, partial=True, context={"request": request}
+        )
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -110,13 +125,22 @@ class CloudAccountRegionsView(APIView):
         return Response(regions, status=200)
 
 
-class UserProfileView(APIView):
+class UserProfileView(RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        print("user details :", request.user.username)
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+    def get_serializer_class(self):
+        if self.request.method in ("PATCH", "PUT"):
+            return UserUpdateSerializer
+        return UserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(self.get_object(), data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(self.get_object()).data)
 
 
 class ChangePasswordView(APIView):
@@ -137,6 +161,35 @@ class ChangePasswordView(APIView):
         user.save()
 
         return Response({"message": "Password changed successfully"})
+
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        form = PasswordResetForm(data={"email": email})
+
+        if form.is_valid():
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                email_template_name="registration/password_reset_email.html",
+                subject_template_name="registration/password_reset_subject.txt",
+            )
+
+        return Response(
+            {
+                "message": "If an account exists for that email, we have sent password reset instructions."
+            }
+        )
 
 
 class ConnectionStatusView(APIView):

@@ -136,13 +136,11 @@ const init = async () => {
       setMessage('Account deactivated successfully. Redirecting...', 'success');
       setTimeout(() => {
         window.location.href = buildRedirectUrl('Account deleted successfully.', 'success');
-      }, 1200);
+      }, 100);
     } catch (error) {
       const errorMessage = error?.message || 'Failed to delete account.';
       setMessage(errorMessage, 'error');
-      setTimeout(() => {
-        window.location.href = buildRedirectUrl(errorMessage, 'error');
-      }, 1200);
+      deleteButton.disabled = false;
     }
   });
 

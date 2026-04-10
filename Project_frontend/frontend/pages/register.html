@@ -11,26 +11,30 @@
 <body class="page">
   <main class="auth-card">
     <h1>Create your space</h1>
-    <p>Register an account to manage cloud audits.</p>
     <form id="register-form" class="form-grid" novalidate>
-      <label for="reg-username">Username</label>
-      <input class="form-control" type="text" id="reg-username" autocomplete="username" required>
+      <label for="reg-full-name">Full name</label>
+      <input class="form-control" type="text" id="reg-full-name" autocomplete="name" placeholder="Enter your full name" required>
 
       <label for="reg-email">Email</label>
-      <input class="form-control" type="email" id="reg-email" autocomplete="email" required>
+      <input class="form-control" type="email" id="reg-email" autocomplete="email" placeholder="Enter email" required>
 
       <label for="reg-password">Password</label>
       <div class="input-with-toggle">
-        <input class="form-control" type="password" id="reg-password" autocomplete="new-password" required>
+        <input class="form-control" type="password" id="reg-password" autocomplete="new-password" placeholder="Enter password" required>
         <button type="button" class="password-toggle" data-toggle-for="reg-password" aria-label="Show password">Show</button>
+      </div>
+      <label for="reg-password-confirm">Confirm Password</label>
+      <div class="input-with-toggle">
+        <input class="form-control" type="password" id="reg-password-confirm" autocomplete="new-password" placeholder="Confirm password" required>
+        <button type="button" class="password-toggle" data-toggle-for="reg-password-confirm" aria-label="Show password">Show</button>
       </div>
 
       <div id="register-message" class="message" aria-live="polite"></div>
 
-      <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Register</button>
-        <a class="btn btn-secondary" role="button" href="login.html">Back to login</a>
-      </div>
+      <button class="btn btn-primary btn-full" type="submit">Register</button>
+      <p class="auth-link auth-link--bottom">
+        Have an account? <a class="auth-link__action" href="login.html">Login</a>
+      </p>
     </form>
   </main>
   <script type="module" src="../components/loader/loader.js"></script>

@@ -5,7 +5,6 @@ const emailEl = document.getElementById('profile-email');
 const fullNameEl = document.getElementById('profile-full-name');
 const initialsEl = document.getElementById('profile-initials');
 const createdEl = document.getElementById('profile-created');
-const lastLoginEl = document.getElementById('profile-last-login');
 const messageEl = document.getElementById('profile-message');
 const refreshButton = document.getElementById('refresh-user');
 const updateButton = document.getElementById('update-details');
@@ -53,14 +52,13 @@ const deriveInitials = (fullName, username) => {
 };
 
 const renderProfile = (profile) => {
-  const username = profile?.username || '—';
   const fullName = resolveFullName(profile);
-  usernameEl && (usernameEl.textContent = username);
-  fullNameEl && (fullNameEl.textContent = fullName);
-  initialsEl && (initialsEl.textContent = deriveInitials(fullName, username));
+  const displayName = fullName !== '—' ? fullName : profile?.first_name || '—';
+  usernameEl && (usernameEl.textContent = displayName);
+  fullNameEl && (fullNameEl.textContent = displayName);
+  initialsEl && (initialsEl.textContent = deriveInitials(displayName, displayName));
   emailEl && (emailEl.textContent = profile?.email || '—');
   createdEl && (createdEl.textContent = formatDate(profile?.date_joined || profile?.created_at));
-  lastLoginEl && (lastLoginEl.textContent = formatDate(profile?.last_login));
 };
 
 const fetchProfile = async () => {
@@ -84,8 +82,15 @@ const fetchProfile = async () => {
 };
 
 refreshButton?.addEventListener('click', fetchProfile);
-updateButton?.addEventListener('click', () => setMessage('Please use the API to update profile data.', 'success'));
-changePasswordButton?.addEventListener('click', () => setMessage('Password management is handled by the backend.', 'success'));
+
+updateButton?.addEventListener('click', () => {
+  window.location.href = 'edit_profile.html';
+});
+
+changePasswordButton?.addEventListener('click', () => {
+  window.location.href = 'change_password.html';
+});
+
 logoutButtons.forEach((button) => {
   button?.addEventListener('click', () => {
     clearTokens();

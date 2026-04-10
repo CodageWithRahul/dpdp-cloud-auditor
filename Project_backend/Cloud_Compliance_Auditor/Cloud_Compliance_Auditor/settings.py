@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-=9h-z9w^f*$(m^!bw!)b(2y*0u#%d4sv!7_zyh3@0kx88$_wh#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -42,11 +42,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "report",
+    "axes",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "axes.middleware.AxesMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -132,3 +134,6 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5500",
 ]
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "DPDP Cloud Auditor <no-reply@dpdpcloudauditor.local>"
