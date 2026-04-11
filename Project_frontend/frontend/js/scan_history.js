@@ -143,6 +143,11 @@ const init = () => {
   loadHistory();
   historyBody?.addEventListener("click", handleReportClick);
   filterButton?.addEventListener("click", applyFilters);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      applyFilters();
+    }
+  });
   resetButton?.addEventListener("click", () => {
     providerFilter && (providerFilter.value = "");
     dateFromFilter && (dateFromFilter.value = "");

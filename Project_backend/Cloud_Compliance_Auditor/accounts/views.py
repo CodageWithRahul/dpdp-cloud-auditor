@@ -7,6 +7,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.generics import RetrieveUpdateAPIView
 from .services.validator_selector import validate_credentials
 from .services.region_selector import get_regions
+from rest_framework_simplejwt.views import TokenObtainPairView
+from axes.decorators import axes_dispatch
 
 
 from .models import CloudAccount
@@ -48,7 +50,9 @@ class CloudAccountListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data, context={"request": request})
+        serializer = self.serializer_class(
+            data=request.data, context={"request": request}
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -137,7 +141,9 @@ class UserProfileView(RetrieveUpdateAPIView):
         return self.request.user
 
     def update(self, request, *args, **kwargs):
-        serializer = self.get_serializer(self.get_object(), data=request.data, partial=True)
+        serializer = self.get_serializer(
+            self.get_object(), data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserSerializer(self.get_object()).data)
@@ -215,3 +221,10 @@ class ConnectionStatusView(APIView):
 
         except CloudAccount.DoesNotExist:
             return Response({"detail": "Account not found"}, status=404)
+
+
+class AxesTokenObtainPairView(TokenObtainPairView):
+
+    @axes_dispatch
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)

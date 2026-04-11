@@ -71,7 +71,6 @@ const clearMessageQuery = () => {
 
 const renderAccountCards = (accounts = accountsCache) => {
   if (!accountsCardList) return;
-
   accountsCardList.innerHTML = "";
 
   if (!accounts.length) {
@@ -89,7 +88,6 @@ const renderAccountCards = (accounts = accountsCache) => {
     const accountName = account.account_name || "Unnamed account";
 
     const cachedStatus = getCachedStatus(account.id);
-
     const statusText = cachedStatus
       ? cachedStatus.is_connected
         ? "Connected"
@@ -136,7 +134,7 @@ const renderAccountCards = (accounts = accountsCache) => {
           </button>
 
           <span
-            class="status-badge ${statusClass}"
+            class="status-text ${statusClass}"
             id="status-text-${account.id}"
           >
             ${statusText}
@@ -222,23 +220,23 @@ const fetchAccounts = async () => {
   }
 };
 
-const startScan = async (account) => {
-  if (!account) return;
-  setMessage("Starting scan for " + (account.account_name || "account") + "...", "success");
-  try {
-    const response = await fetchWithAuth(BASE_URL + "/api/scanner/start/", {
-      method: "POST",
-      body: JSON.stringify({ cloud_account_id: account.id, region: account.region || "ALL" }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload?.detail || "Scan request failed.");
-    }
-    setMessage(payload?.message || "Scan queued.", "success");
-  } catch (error) {
-    setMessage(error?.message || "Unable to start scan.", "error");
-  }
-};
+// const startScan = async (account) => {
+//   if (!account) return;
+//   setMessage("Starting scan for " + (account.account_name || "account") + "...", "success");
+//   try {
+//     const response = await fetchWithAuth(BASE_URL + "/api/scanner/start/", {
+//       method: "POST",
+//       body: JSON.stringify({ cloud_account_id: account.id, region: account.region || "ALL" }),
+//     });
+//     const payload = await response.json().catch(() => ({}));
+//     if (!response.ok) {
+//       throw new Error(payload?.detail || "Scan request failed.");
+//     }
+//     setMessage(payload?.message || "Scan queued.", "success");
+//   } catch (error) {
+//     setMessage(error?.message || "Unable to start scan.", "error");
+//   }
+// };
 
 const deleteAccount = async (accountId) => {
   if (!window.confirm("Delete this cloud account configuration?")) return;
@@ -312,7 +310,7 @@ const updateAccountCardStatus = (accountId, state, message) => {
   if (statusText) {
     const text = state === 'connected' ? 'Connected' : state === 'checking' ? 'Checking...' : message || 'Not connected';
     statusText.textContent = text;
-    statusText.className = `status-text ${state === 'connected' ? 'success' : state === 'checking' ? 'checking' : 'error'}`;
+    statusText.className = `status-text ${state === 'connected' ? 'status-connected' : state === 'checking' ? 'status-checking' : 'status-error'}`;
   }
 };
 
@@ -391,7 +389,6 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
     }
 
     const data = await res.json();
-    console.log("Connection status response:", data);
 
     // Cache result
     setCachedStatus(account.id, {
@@ -418,16 +415,15 @@ const checkConnectionStatus = async (account, forceRefresh = false) => {
         if (data.connection_issue) {
           showConnectionIssue(account, data.connection_issue);
         }
-        updateAccountCardStatus(account.id, 'error', data.connection_issue);
+        updateAccountCardStatus(account.id, 'error', data.connection_status);
       }
     }
 
     return data;
 
-  } catch (err) {
+  } catch (err) { 
 
     console.error("Connection check error:", err);
-
     if (cell) {
       cell.innerHTML =
         '<span class="status-badge status-error">Check failed</span>';

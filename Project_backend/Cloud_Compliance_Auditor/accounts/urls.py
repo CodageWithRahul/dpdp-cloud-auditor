@@ -1,5 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
+
+# from .AxesTokenObtainPairView import AxesTokenObtainPairView
 from .views import (
     ChangePasswordView,
     CloudAccountDetailView,
@@ -10,13 +12,17 @@ from .views import (
     RegisterView,
     UserProfileView,
 )
+
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
+
 urlpatterns = [
-    path("password-reset/", ForgotPasswordView.as_view(), name="password_reset_request"),
+    path(
+        "password-reset/", ForgotPasswordView.as_view(), name="password_reset_request"
+    ),
     path(
         "password-reset/done/",
         auth_views.PasswordResetDoneView.as_view(

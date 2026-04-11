@@ -137,3 +137,15 @@ CORS_ALLOWED_ORIGINS = [
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "DPDP Cloud Auditor <no-reply@dpdpcloudauditor.local>"
+
+# AUTHENTICATION_BACKENDS = [
+#     "axes.backends.AxesStandaloneBackend",
+#     "django.contrib.auth.backends.ModelBackend",
+# ]
+# AXES_ENABLED = True
+# AXES_FAILURE_LIMIT = 3
+
+# AXES_COOLOFF_TIME = 0.5  # about 2 minutes
+# AXES_RESET_ON_SUCCESS = True
+# AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
+# AXES_ONLY_USER_FAILURES = False
