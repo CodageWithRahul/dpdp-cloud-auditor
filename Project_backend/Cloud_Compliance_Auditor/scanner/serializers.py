@@ -67,5 +67,15 @@ class ScanHistorySerializer(serializers.ModelSerializer):
             "issues_found",
         )
 
-    def get_region(self, obj: ScanJob) -> str | None:
-        return obj.target_regions_text()
+    def get_region(self, obj: ScanJob):
+        """
+        Return list of regions instead of raw text.
+        This keeps the API clean and frontend-friendly.
+        """
+
+        region_text = obj.target_regions_text()
+
+        if not region_text:
+            return []
+
+        return [r.strip() for r in region_text.split(",") if r.strip()]

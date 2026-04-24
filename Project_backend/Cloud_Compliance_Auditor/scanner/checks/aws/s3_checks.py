@@ -7,6 +7,11 @@ from scanner.utils.issue_builder import build_issue
 logger = logging.getLogger(__name__)
 
 
+INDIA_REGIONS = ["ap-south-1", "ap-south-2"]
+
+PERSONAL_DATA_TAGS = ["personal", "pii", "sensitive", "confidential", "customer-data"]
+
+
 def check_public_s3_buckets(session):
     client = session.client("s3")
     findings = []
@@ -26,7 +31,50 @@ def check_public_s3_buckets(session):
     for bucket in buckets:
         bucket_name = bucket["Name"]
         resource_info = {"resource_type": "S3 Bucket", "resource_id": bucket_name}
+        # -------------------------------------------------
+        # GET BUCKET REGION
+        # -------------------------------------------------
+        try:
+            response = client.head_bucket(Bucket=bucket_name)
+            bucket_region = response["ResponseMetadata"]["HTTPHeaders"].get(
+                "x-amz-bucket-region", "unknown"
+            )
+        except ClientError:
+            bucket_region = "unknown"
 
+        # -------------------------------------------------
+        # GET BUCKET TAGS (DATA CLASSIFICATION)
+        # -------------------------------------------------
+        data_class = None
+
+        try:
+            tagset = client.get_bucket_tagging(Bucket=bucket_name)["TagSet"]
+
+            for tag in tagset:
+                if tag["Key"].lower() in ["dataclass", "data_class", "classification"]:
+                    data_class = tag["Value"].lower()
+
+        except ClientError:
+            pass
+
+        # -------------------------------------------------
+        # DPDP PERSONAL DATA LOCATION CHECK
+        # -------------------------------------------------
+        if (
+            data_class
+            and data_class in PERSONAL_DATA_TAGS
+            and bucket_region not in INDIA_REGIONS
+        ):
+
+            issue = build_issue(
+                "Personal data stored outside India",
+                f"S3 bucket contains sensitive data but is hosted in region {bucket_region}.",
+                "Move sensitive data to Indian regions such as ap-south-1 (Mumbai) or ap-south-2 (Hyderabad).",
+                severity="HIGH",
+            )
+
+            issue.update(resource_info)
+            findings.append(issue)
         # -------------------------------------------------
         # PUBLIC ACCESS BLOCK CHECK
         # -------------------------------------------------

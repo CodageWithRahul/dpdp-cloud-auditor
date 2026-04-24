@@ -18,6 +18,55 @@
   gap: 0.9rem;
 }
 
+.guide-link-wrapper {
+  margin-top: 6px;
+}
+
+.provider-pill {
+  margin-left: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.1);
+  color: var(--accent-color, #4f46e5);
+  font-weight: 500;
+}
+
+.guide-link.disabled .provider-pill {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.provider-pill.aws {
+  background: rgba(255, 153, 0, 0.15);
+  color: #ff9900;
+}
+
+.provider-pill.gcp {
+  background: rgba(66, 133, 244, 0.15);
+  color: #4285f4;
+}
+
+.provider-pill.azure {
+  background: rgba(0, 120, 212, 0.15);
+  color: #0078d4;
+}
+.guide-link {
+  font-size: 15px;
+  color: var(--accent-color, #4f46e5);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.guide-link:hover {
+  text-decoration: underline;
+}
+
+.guide-link.disabled {
+  color: #9ca3af;
+  pointer-events: none;
+  cursor: not-allowed;
+}
 .loader-overlay{
   position: fixed;
   inset: 0;

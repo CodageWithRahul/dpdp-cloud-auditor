@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Setup Guide</title>
+        <!-- Your main styles -->
+        <link rel="stylesheet" href="../css/app.css">
+        <link rel="stylesheet" href="../css/setup-guide.css">
+        <link rel="stylesheet" href="../components/loader/loader.css">
+    </head>
+    <body>
+        <div class="page-shell">
+            <!-- Navbar -->
+            <div id="shell-nav"></div>
+            <!-- Main content -->
+            <main class="main-content">
+                <header class="page-header">
+                    <div>
+                        <h2 id="guideTitle">Setup Guide</h2>
+                        <p class="guide-subtitle">Follow these steps to connect your cloud account</p>
+                    </div>
+                </header>
+                <section class="panel">
+                    <div id="stepsContainer" class="steps-container"></div>
+                </section>
+                <section class="guide-footer">
+                    <div class="guide-actions">
+                        <button id="back-btn" class="btn secondary">← Back to Add Account</button>
+                    </div>
+                </section>
+            </main>
+            <!-- Footer -->
+            <div id="shell-footer"></div>
+        </div>
+        <!-- IMPORTANT: must be same as your dashboard -->
+        <script type="module">
+            import {
+                initShell
+            } from '../js/layout.js';
+            initShell('dashboard');
+            // or use 'accounts' if you want correct menu highlight
+        </script>
+        <script type="module" src="../js/setup-guide.js"></script>
+    </body>
+</html>

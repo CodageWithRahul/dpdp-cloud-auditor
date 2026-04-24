@@ -80,10 +80,62 @@ const formatRegionValue = (value) => {
 
 const setRegionDisplay = (candidate) => {
   if (!reportRegion) return;
-  const resolved = resolveRegionCandidate(candidate);
-  reportRegion.textContent = formatRegionValue(resolved);
-};
 
+  let pool = [];
+
+  const capture = (value) => {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(capture);
+      return;
+    }
+
+    const trimmed = value.toString().trim();
+    if (trimmed) pool.push(trimmed);
+  };
+
+  capture(candidate);
+
+  // ALWAYS fallback to URL param
+  if (!pool.length && regionParam) {
+    capture(regionParam);
+  }
+
+  pool = [...new Set(pool)];
+
+  reportRegion.innerHTML = '';
+
+  // no data case
+  if (!pool.length) {
+    reportRegion.textContent = '-';
+    return;
+  }
+
+  // ALL case
+  if (pool.includes('ALL')) {
+    reportRegion.textContent = 'All regions';
+    return;
+  }
+
+  const first = pool[0];
+  const remaining = pool.length - 1;
+
+  // main region text
+  const text = document.createElement('span');
+  text.textContent = first;
+
+  reportRegion.appendChild(text);
+
+  // pill only if more
+  if (remaining > 0) {
+    const pill = document.createElement('span');
+    pill.className = 'region-pill';
+    pill.textContent = `+${remaining}`;
+
+    reportRegion.appendChild(pill);
+  }
+};
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 const SEVERITY_COLORS = {
   critical: '#f87171',
@@ -205,8 +257,9 @@ const fetchScanLogs = async (jobId) => {
   if (!jobId) return [];
   const candidates = [
     `${REPORT_BASE}/${jobId}/logs/`,
+    `${BASE_URL}/api/scanner/scan/${jobId}/logs/`,
     `${BASE_URL}/api/scanner/logs/?scan_job_id=${encodeURIComponent(jobId)}`,
-    `${BASE_URL}/api/scanner/scan/logs/?scan_job_id=${encodeURIComponent(jobId)}`,
+    `${BASE_URL}/api/scanner/scan/?scan_job_id=${encodeURIComponent(jobId)}/logs/`,
   ];
   for (const url of candidates) {
     try {
@@ -555,21 +608,21 @@ const clearReport = () => {
 };
 
 const fetchJson = async (url) => {
-    const response = await fetchWithAuth(url, { method: 'GET' });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      const message = payload?.detail || payload?.message || 'Unable to load report data.';
-      const error = new Error(message);
-      error.status = response.status;
-      throw error;
-    }
-    if (payload === null) {
-      const error = new Error('Unable to load report data.');
-      error.status = response.status;
-      throw error;
-    }
-    return payload;
-  };
+  const response = await fetchWithAuth(url, { method: 'GET' });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = payload?.detail || payload?.message || 'Unable to load report data.';
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+  if (payload === null) {
+    const error = new Error('Unable to load report data.');
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+};
 
 const updateReportMetadata = ({ jobId = null, downloadAvailable = false, timestamp = null } = {}) => {
   if (reportJobId) {
@@ -592,7 +645,6 @@ const updateReportMetadata = ({ jobId = null, downloadAvailable = false, timesta
 };
 
 const setMetadataFromSummary = (summary) => {
-  console.log(summary)
   if (!summary) return;
   if (reportProvider) {
     reportProvider.textContent = summary.cloud_account_provider || summary.provider || '-';
@@ -601,14 +653,21 @@ const setMetadataFromSummary = (summary) => {
     reportAccount.textContent = summary.cloud_account_name || summary.account_name || '-';
   }
   if (reportScanDate) {
-    const date = summary.scan_date || summary.scan_started_at || summary.created_at;
+    const date =
+      summary.scan_date ||
+      summary.scan_started_at ||
+      summary.start_time ||
+      summary.end_time ||
+      summary.created_at;
     reportScanDate.textContent = date ? new Date(date).toLocaleDateString() : '-';
   }
   if (reportTitle) {
     reportTitle.textContent = 'Report';
   }
   const regionSource =
-    summary.scan_regions;
+    summary.scan_regions ||
+    summary.region ||
+    regionParam;
   setRegionDisplay(regionSource);
 };
 const resetMetadata = () => {
@@ -694,49 +753,49 @@ const downloadReport = async (format) => {
 };
 
 const loadReport = async (jobId) => {
-    if (!jobId) return;
-    currentAccountId = null;
-    lastLoadedJobId = jobId;
-    setAccountMetadataOverrides({ name: null, provider: null });
-    clearReport();
-    setMessage('');
-    setLoading(true);
-    try {
-      const [summaryResult, servicesResult, findingsResult] = await Promise.allSettled([
-        fetchJson(`${REPORT_BASE}/${jobId}/summary/`),
-        fetchJson(`${REPORT_BASE}/${jobId}/services/`),
-        fetchJson(`${REPORT_BASE}/${jobId}/results/`),
-      ]);
-      if (summaryResult.status !== 'fulfilled') {
-        throw summaryResult.reason;
-      }
-      const services = servicesResult.status === 'fulfilled' ? servicesResult.value : [];
-      const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
-      const summaryLogs = normalizeScanLogPayload(summaryResult.value);
-      renderSummary(summaryResult.value);
-      setMetadataFromSummary(summaryResult.value);
-      renderSeverityChart(findings);
-      renderSeverityPie(findings);
-      renderServiceChart(services);
-      renderResults(findings);
-      renderServices(services);
-      renderReportOverview(findings);
-      renderReportLogs(summaryLogs);
-      startLogPolling(jobId);
-      setMessage(`Loaded report for scan job #${jobId}.`, 'success');
-      updateReportMetadata({ jobId, downloadAvailable: true, timestamp: new Date().toLocaleString() });
-      showReportDetails();
-    } catch (error) {
-      const unsupported = error?.status === 404 || /not found/i.test(error?.message || '');
-      const message = unsupported
-        ? 'No scan was found with that scan job ID.'
-        : error?.message || 'Unable to load report.';
-      setMessage(message, 'error');
-      hideReportDetails();
-    } finally {
-      setLoading(false);
+  if (!jobId) return;
+  currentAccountId = null;
+  lastLoadedJobId = jobId;
+  setAccountMetadataOverrides({ name: null, provider: null });
+  clearReport();
+  setMessage('');
+  setLoading(true);
+  try {
+    const [summaryResult, servicesResult, findingsResult] = await Promise.allSettled([
+      fetchJson(`${REPORT_BASE}/${jobId}/summary/`),
+      fetchJson(`${REPORT_BASE}/${jobId}/services/`),
+      fetchJson(`${REPORT_BASE}/${jobId}/results/`),
+    ]);
+    if (summaryResult.status !== 'fulfilled') {
+      throw summaryResult.reason;
     }
-  };
+    const services = servicesResult.status === 'fulfilled' ? servicesResult.value : [];
+    const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
+    const summaryLogs = normalizeScanLogPayload(summaryResult.value);
+    renderSummary(summaryResult.value);
+    setMetadataFromSummary(summaryResult.value);
+    renderSeverityChart(findings);
+    renderSeverityPie(findings);
+    renderServiceChart(services);
+    renderResults(findings);
+    renderServices(services);
+    renderReportOverview(findings);
+    renderReportLogs(summaryLogs);
+    startLogPolling(jobId);
+    setMessage(`Loaded report for scan job #${jobId}.`, 'success');
+    updateReportMetadata({ jobId, downloadAvailable: true, timestamp: new Date().toLocaleString() });
+    showReportDetails();
+  } catch (error) {
+    const unsupported = error?.status === 404 || /not found/i.test(error?.message || '');
+    const message = unsupported
+      ? 'No scan was found with that scan job ID.'
+      : error?.message || 'Unable to load report.';
+    setMessage(message, 'error');
+    hideReportDetails();
+  } finally {
+    setLoading(false);
+  }
+};
 
 const loadAccountReport = async (accountId, { scanJobId, accountName, providerName } = {}) => {
   if (!accountId) return;

@@ -1,4 +1,4 @@
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Case, When, Value, IntegerField
 from django.http import FileResponse
 from django.utils import timezone
 
@@ -31,9 +31,9 @@ class ScanResultListView(ListAPIView):
     def get_queryset(self):
         scan_job_id = self.kwargs.get("scan_job_id")
         scan_job = get_scan_job_for_user(self.request.user, scan_job_id)
-        queryset = (
-            ScanResult.objects.filter(scan_job=scan_job)
-            .select_related("scan_job")
+
+        queryset = ScanResult.objects.filter(scan_job=scan_job).select_related(
+            "scan_job"
         )
 
         status = self.request.query_params.get("status")
@@ -47,6 +47,18 @@ class ScanResultListView(ListAPIView):
         if service:
             queryset = queryset.filter(service_name__iexact=service)
 
+        # 🔥 Severity sorting (HIGH → MEDIUM → LOW)
+        queryset = queryset.annotate(
+            severity_rank=Case(
+                When(severity__iexact="critical", then=Value(1)),
+                When(severity__iexact="high", then=Value(2)),
+                When(severity__iexact="medium", then=Value(3)),
+                When(severity__iexact="low", then=Value(4)),
+                default=Value(5),
+                output_field=IntegerField(),
+            )
+        ).order_by("severity_rank")
+
         return queryset
 
 
@@ -57,9 +69,8 @@ class ScanResultDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return (
-            ScanResult.objects.select_related("scan_job__cloud_account")
-            .filter(scan_job__cloud_account__user=self.request.user)
+        return ScanResult.objects.select_related("scan_job__cloud_account").filter(
+            scan_job__cloud_account__user=self.request.user
         )
 
 
@@ -76,9 +87,7 @@ class ReportSummaryView(APIView):
         status_aggregation = queryset.values("status").annotate(count=Count("id"))
         status_map = {item["status"]: item["count"] for item in status_aggregation}
 
-        severity_aggregation = (
-            queryset.values("severity").annotate(count=Count("id"))
-        )
+        severity_aggregation = queryset.values("severity").annotate(count=Count("id"))
         severity_count = {key: 0 for key, _ in ScanResult.SEVERITY_CHOICES}
         for item in severity_aggregation:
             severity_count[item["severity"]] = item["count"]
@@ -149,9 +158,7 @@ class CloudAccountScanResultsView(ListAPIView):
 
     def get_queryset(self):
         cloud_account_id = self.kwargs.get("cloud_account_id")
-        cloud_account = get_cloud_account_for_user(
-            self.request.user, cloud_account_id
-        )
+        cloud_account = get_cloud_account_for_user(self.request.user, cloud_account_id)
 
         queryset = (
             ScanResult.objects.filter(scan_job__cloud_account=cloud_account)
@@ -199,7 +206,9 @@ def _build_report_context(user, scan_job_id, cloud_account_id):
         "scan_jobs": scan_jobs,
         "cloud_account": cloud_account,
     }
-    report_context["scan_regions"] = get_scan_regions_for_jobs(report_context["scan_jobs"])
+    report_context["scan_regions"] = get_scan_regions_for_jobs(
+        report_context["scan_jobs"]
+    )
     return findings, report_context
 
 
@@ -230,9 +239,7 @@ def export_pdf_report(request):
     if include_logs:
         scan_job = report_context.get("scan_job")
         if scan_job:
-            scan_logs = list(
-                scan_job.logs.order_by("created_at")
-            )
+            scan_logs = list(scan_job.logs.order_by("created_at"))
         else:
             scan_jobs = report_context.get("scan_jobs") or []
             scan_logs = list(
@@ -280,9 +287,7 @@ def export_excel_report(request):
     if include_logs:
         scan_job = report_context.get("scan_job")
         if scan_job:
-            scan_logs = list(
-                scan_job.logs.order_by("created_at")
-            )
+            scan_logs = list(scan_job.logs.order_by("created_at"))
         else:
             scan_jobs = report_context.get("scan_jobs") or []
             scan_logs = list(

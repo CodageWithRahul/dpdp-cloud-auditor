@@ -60,7 +60,11 @@ def run_gcp_scan(scan_job, account, regions=None):
 
     region_tag = None
     if formatted_regions:
-        region_tag = formatted_regions[0] if len(formatted_regions) == 1 else ", ".join(formatted_regions)
+        region_tag = (
+            formatted_regions[0]
+            if len(formatted_regions) == 1
+            else ", ".join(formatted_regions)
+        )
 
     try:
         result = run_all_checks(
@@ -68,7 +72,9 @@ def run_gcp_scan(scan_job, account, regions=None):
         )
     except Exception as exc:
         logger.error("GCP runner raised an exception: %s", exc)
-        raise RuntimeError("Unable to complete GCP checks with current credentials") from exc
+        raise RuntimeError(
+            "Unable to complete GCP checks with current credentials"
+        ) from exc
 
     for finding in result["findings"]:
         if region_tag:
@@ -82,16 +88,16 @@ def run_gcp_scan(scan_job, account, regions=None):
 
     if interrupted:
         if scanned:
-            summary_message = (
-                f"Scan interrupted by user after running {', '.join(scanned)}{region_suffix}."
-            )
+            summary_message = f"Scan interrupted by user after running {', '.join(scanned)}{region_suffix}."
         else:
             summary_message = (
                 f"Scan interrupted by user before running GCP checks{region_suffix}."
             )
         scan_job.log(summary_message, level="WARNING")
     elif not scanned:
-        summary_message = f"No active services detected; nothing was scanned for GCP{region_suffix}."
+        summary_message = (
+            f"No active services detected; nothing was scanned for GCP{region_suffix}."
+        )
         scan_job.log(summary_message, level="INFO")
     else:
         summary_message = f"Completed checks for {', '.join(scanned)}{region_suffix}."

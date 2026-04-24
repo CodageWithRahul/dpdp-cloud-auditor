@@ -7,6 +7,50 @@
   letter-spacing: 0.04em;
 }
 
+.history-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.history-pagination button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+.history-pagination button:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+}
+.history-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+#page-info {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
 .status-chip.running {
   background: rgba(59, 130, 246, 0.2);
   color: #60a5fa;
@@ -101,6 +145,28 @@
   transition: opacity 0.2s ease;
 }
 
+
+.region-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: 6px;
+  padding: 2px 8px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  border-radius: 999px;
+  background: rgba(59,130,246,0.12);
+  color: #3b82f6;
+
+  border: 1px solid rgba(59,130,246,0.25);
+}
+
+.region-main{
+  font-weight:500;
+}
 
 
 .scan-filter__actions {

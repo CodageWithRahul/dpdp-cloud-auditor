@@ -273,6 +273,42 @@ const init = async () => {
   accountForm?.addEventListener('submit', handleFormSubmit);
 };
 
+
+const providerSelect2 = document.getElementById("provider-select");
+const guideLink = document.getElementById("guide-link");
+const pill = document.getElementById("provider-pill");
+
+const PROVIDER_MAP = {
+  AWS: "aws",
+  AZURE: "azure",
+  GCP: "gcp"
+};
+
+function updateGuideLink() {
+  const selected = providerSelect2.value;
+
+  if (!selected) {
+    guideLink.classList.add("disabled");
+    guideLink.href = "#";
+    pill.textContent = "—";
+    return;
+  }
+  const provider = PROVIDER_MAP[selected];
+
+  guideLink.classList.remove("disabled");
+  guideLink.href = `setup-guide.html?provider=${provider}`;
+
+  // update pill
+  pill.textContent = selected;
+  pill.className = `provider-pill ${selected.toLowerCase()}`;
+}
+
+// 🔥 FIX: run once on page load
+updateGuideLink();
+
+// run again when changed
+providerSelect2.addEventListener("change", updateGuideLink);
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

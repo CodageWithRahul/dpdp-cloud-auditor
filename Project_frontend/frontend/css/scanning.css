@@ -16,6 +16,24 @@
   gap: 0.35rem;
 }
 
+.region-pill {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgb(59, 130, 246);
+    vertical-align: middle;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.15);
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgba(59, 130, 246, 0.35);
+    border-image: initial;
+}
+
+
+
 .scan-title-row h2 {
   display: inline-flex;
   align-items: center;

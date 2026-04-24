@@ -1,10 +1,31 @@
 import { BASE_URL, fetchWithAuth, requireAuth } from './api.js';
+
+/* =========================
+   DOM ELEMENTS
+========================= */
 const totalAccountsEl = document.getElementById('total-accounts');
 const totalScansEl = document.getElementById('total-scans');
 const totalFindingsEl = document.getElementById('total-findings');
 const lastScanInfoEl = document.getElementById('last-scan-info');
 const accountsListEl = document.getElementById('accounts-list');
 const dashboardMessageEl = document.getElementById('dashboard-message');
+
+/* =========================
+   STATE
+========================= */
+const dashboardState = {
+  accounts: [],
+  stats: {
+    total_scans: 0,
+    total_findings: 0,
+    last_scan_status: null,
+    last_scan_time: null,
+  },
+};
+
+/* =========================
+   STORAGE CACHE
+========================= */
 const CACHE_STORAGE_KEY = 'cloudConnectionStatusCache';
 const safeSessionStorage = (() => {
   try {
@@ -16,17 +37,22 @@ const safeSessionStorage = (() => {
   }
   return null;
 })();
+
 let connectionStatusCache = null;
+
 const getConnectionCacheStore = () => {
   if (connectionStatusCache) return connectionStatusCache;
+
   connectionStatusCache = {};
   if (!safeSessionStorage) return connectionStatusCache;
+
   try {
     const raw = safeSessionStorage.getItem(CACHE_STORAGE_KEY);
     connectionStatusCache = raw ? JSON.parse(raw) : {};
   } catch (error) {
     connectionStatusCache = {};
   }
+
   return connectionStatusCache;
 };
 
@@ -52,13 +78,15 @@ const setCachedConnectionStatus = (accountId, payload) => {
   persistConnectionCache();
 };
 
+/* =========================
+   UTILITY FUNCTIONS
+========================= */
 const escapeHtmlAttr = (value = '') => String(value).replace(/"/g, '&quot;');
-let accounts = [];
-let history = [];
+
 const setMessage = (text = '', type = 'success') => {
   if (!dashboardMessageEl) return;
   dashboardMessageEl.textContent = text;
-  dashboardMessageEl.classList.remove('success', 'error');
+  dashboardMessageEl.classList.remove('success', 'error', 'info');
   if (!text) return;
   dashboardMessageEl.classList.add(type);
 };
@@ -81,26 +109,32 @@ const statusLabel = (status) => {
   return 'Completed';
 };
 
-const statusClass = (label) => {
-  const normalized = label.toLowerCase();
-  if (normalized.includes('running')) return 'running';
-  if (normalized.includes('failed')) return 'failed';
-  return 'completed';
-};
-
-const relativeTime = (timestamp) => {
+/* =========================
+   TIME HELPERS
+========================= */
+function relativeTime(timestamp) {
   if (!timestamp) return 'No scans yet';
+
   const parsed = new Date(timestamp);
   if (Number.isNaN(parsed.getTime())) return 'No scans yet';
-  const diff = Date.now() - parsed.getTime();
+
+  const diffMs = Math.max(0, Date.now() - parsed.getTime());
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (diff < minute) return 'moments ago';
-  if (diff < hour) return `${Math.round(diff / minute)} minutes ago`;
-  if (diff < day) return `${Math.round(diff / hour)} hours ago`;
-  return `${Math.round(diff / day)} days ago`;
-};
+  const month = 30 * day;
+  const year = 365 * day;
+
+  if (diffMs < minute) return 'moments ago';
+
+  const pluralize = (value, unit) => `${value} ${unit}${value === 1 ? '' : 's'} ago`;
+
+  if (diffMs < hour) return pluralize(Math.round(diffMs / minute), 'minute');
+  if (diffMs < day) return pluralize(Math.round(diffMs / hour), 'hour');
+  if (diffMs < month) return pluralize(Math.round(diffMs / day), 'day');
+  if (diffMs < year) return pluralize(Math.round(diffMs / month), 'month');
+  return pluralize(Math.round(diffMs / year), 'year');
+}
 
 const formatDateTime = (timestamp) => {
   if (!timestamp) return 'No scans yet';
@@ -116,40 +150,65 @@ const formatDateTime = (timestamp) => {
   }
 };
 
-const getFindingsCount = (entry = {}) => {
-  return (
-    Number(entry.issues_found ?? entry.findings_count ?? entry.findings ?? entry.total_findings ?? 0) || 0
-  );
-};
-
-const checkConnectionStatus = async (accountId) => {
-  try {
-    const response = await fetchWithAuth(
-      `${BASE_URL}/api/accounts/cloud-accounts/${accountId}/connection-status/`
-    );
-    const data = await response.json();
-    return data;
-  } catch (err) {
-    return { is_connected: false, connection_issue: 'Connection check failed' };
-  }
-};
-
+/* =========================
+   STATS FUNCTIONS
+========================= */
 const updateStats = () => {
-  totalAccountsEl && (totalAccountsEl.textContent = accounts.length);
-  totalScansEl && (totalScansEl.textContent = history.length);
-  const totalFindings = history.reduce((sum, entry) => sum + getFindingsCount(entry), 0);
-  totalFindingsEl && (totalFindingsEl.textContent = totalFindings);
-  if (history.length) {
-    const latest = [...history].sort(
-      (a, b) => new Date(b.end_time || b.start_time || 0) - new Date(a.end_time || a.start_time || 0)
-    )[0];
-    const infoLabel = statusLabel(latest.status);
-    const timeText = relativeTime(latest.end_time || latest.start_time || latest.created_at || 0);
-    lastScanInfoEl && (lastScanInfoEl.textContent = `${timeText} ${infoLabel}`);
-  } else {
-    lastScanInfoEl && (lastScanInfoEl.textContent = 'Idle');
+  const { accounts, stats } = dashboardState;
+
+  if (totalAccountsEl) totalAccountsEl.textContent = String(accounts.length);
+  if (totalScansEl) totalScansEl.textContent = String(Number(stats.total_scans) || 0);
+  if (totalFindingsEl) totalFindingsEl.textContent = String(Number(stats.total_findings) || 0);
+
+  if (!lastScanInfoEl) return;
+
+  const label = statusLabel(stats.last_scan_status);
+  const timeText = relativeTime(stats.last_scan_time);
+
+  if (label === 'Idle' && timeText === 'No scans yet') {
+    lastScanInfoEl.textContent = 'Idle';
+    return;
+  }
+
+  if (label === 'Idle') {
+    lastScanInfoEl.textContent = timeText;
+    return;
+  }
+
+  if (timeText === 'No scans yet') {
+    lastScanInfoEl.textContent = label;
+    return;
+  }
+
+  lastScanInfoEl.textContent = `${label} \u2022 ${timeText}`;
+};
+
+const loadStats = async () => {
+  try {
+    const payload = await fetchJson(`${BASE_URL}/api/scanner/scan/stats/`);
+    dashboardState.stats.total_scans = Number(payload?.total_scans) || 0;
+    dashboardState.stats.total_findings = Number(payload?.total_findings) || 0;
+    dashboardState.stats.last_scan_status = payload?.last_scan_status ?? null;
+    dashboardState.stats.last_scan_time = payload?.last_scan_time ?? null;
+
+    updateStats();
+    return dashboardState.stats;
+  } catch (error) {
+    setMessage(error.message || 'Failed to load scan stats.', 'error');
+
+    dashboardState.stats.total_scans = 0;
+    dashboardState.stats.total_findings = 0;
+    dashboardState.stats.last_scan_status = null;
+    dashboardState.stats.last_scan_time = null;
+
+    updateStats();
+    return dashboardState.stats;
   }
 };
+
+/* =========================
+   REGION HELPERS (DO NOT REMOVE)
+========================= */
 
 const normalizeRegions = (areas = []) => {
   if (!Array.isArray(areas)) return [];
@@ -194,6 +253,21 @@ const populateRegionSelect = (select, regions = []) => {
     select.value = previousValue;
   } else {
     select.value = 'ALL';
+  }
+};
+
+/* =========================
+   ACCOUNT RENDERING
+========================= */
+const checkConnectionStatus = async (accountId) => {
+  try {
+    const response = await fetchWithAuth(
+      `${BASE_URL}/api/accounts/cloud-accounts/${accountId}/connection-status/`
+    );
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    return { is_connected: false, connection_issue: 'Connection check failed' };
   }
 };
 
@@ -258,8 +332,8 @@ const createConnectionController = (account, card) => {
   };
   const refreshStatus = async (force = false) => {
     if (!account?.id) return null;
-    
-    
+
+
     if (!force) {
       const cached = getCachedConnectionStatus(account.id);
       if (cached) {
@@ -283,7 +357,7 @@ const createConnectionController = (account, card) => {
       statusEl.classList.remove('checking', 'connected', 'not-connected');
       statusEl.classList.add('checking');
     }
-    
+
     refreshButton.disabled = true;
     refreshStatus(true).finally(() => {
       refreshButton.disabled = false;
@@ -305,15 +379,15 @@ const matchAccountScan = (account, scan) => {
   return scanNames.some((name) => name && name.toString().toLowerCase().trim() === normalizedAccountName);
 };
 
-const getAccountScans = (account) =>
-  history
-    .filter((scan) => matchAccountScan(account, scan))
-    .sort(
-      (a, b) =>
-        new Date(b.end_time || b.start_time || b.created_at || 0) -
-        new Date(a.end_time || a.start_time || a.created_at || 0)
-    )
-    .slice(0, 3);
+// const getAccountScans = (account) =>
+//   history
+//     .filter((scan) => matchAccountScan(account, scan))
+//     .sort(
+//       (a, b) =>
+//         new Date(b.end_time || b.start_time || b.created_at || 0) -
+//         new Date(a.end_time || a.start_time || a.created_at || 0)
+//     )
+//     .slice(0, 3);
 const buildAccountCard = (account) => {
   const card = document.createElement('article');
   card.className = 'account-card';
@@ -330,9 +404,6 @@ const buildAccountCard = (account) => {
         <option value="">Loading regions...</option>
       </select>
     </div>`;
-  const lastScanTimestamp =
-    account.last_scan_at || account.scan_date || account.last_scan_date;
-  const lastScanText = lastScanTimestamp ? formatDateTime(lastScanTimestamp) : 'No scans yet';
   const connectionError = account.connection_issue || 'Unable to connect to cloud account';
   const providerLabel = account.provider || 'Cloud';
   const providerBadge = providerLabel.toUpperCase();
@@ -392,11 +463,11 @@ const buildAccountCard = (account) => {
 const renderAccounts = () => {
   if (!accountsListEl) return;
   accountsListEl.innerHTML = '';
-  if (!accounts.length) {
+  if (!dashboardState.accounts.length) {
     accountsListEl.innerHTML = '<p class="empty-row">No cloud accounts connected yet.</p>';
     return;
   }
-  accounts.forEach((account) => {
+  dashboardState.accounts.forEach((account) => {
     const card = buildAccountCard(account);
     accountsListEl.appendChild(card);
     const controller = createConnectionController(account, card);
@@ -404,28 +475,122 @@ const renderAccounts = () => {
   });
 };
 
-const buildScanningPageUrl = ({ accountId, region, accountName, providerName }) => {
+/* =========================
+   SCAN START LOGIC
+========================= */
+const buildScanningPageUrl = (scan = {}) => {
+
+  const { jobId, accountId, region, accountName, providerName } = scan;
+
   const params = new URLSearchParams();
-  params.set('cloud_account_id', accountId);
-  if (region) params.set('region', region);
-  if (accountName) params.set('account_name', accountName);
-  if (providerName) params.set('provider', providerName);
-  params.set('auto_start', '1');
+
+  if (jobId) params.set("scan_job_id", jobId);
+  if (accountId) params.set("cloud_account_id", accountId);
+  if (region) params.set("region", region);
+  if (accountName) params.set("account_name", accountName);
+  if (providerName) params.set("provider", providerName);
+
   return `scanning.html?${params.toString()}`;
 };
 
-const runScan = ({ accountId, region, accountName, providerName }) => {
+const runScan = async ({ accountId, region, accountName, providerName, button }) => {
+
   if (!accountId || !region) {
     setMessage('Select an account with a valid region first.', 'error');
     return;
   }
-  setMessage('Redirecting to live scan console...', 'success');
-  window.location.href = buildScanningPageUrl({ accountId, region, accountName, providerName });
+
+  const userConfirmed = confirm("Start a new security scan?");
+  if (!userConfirmed) return;
+
+  try {
+
+    // disable button immediately to prevent double click
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = "Starting...";
+    }
+
+    setMessage('Starting scan job...', 'info');
+
+    const jobId = await startScanJob(accountId, region);
+
+    if (!jobId) {
+      throw new Error("Scan job did not start");
+    }
+
+    const scanData = {
+      jobId,
+      accountId,
+      accountName,
+      providerName,
+      region,
+      startedAt: Date.now()
+    };
+
+    localStorage.setItem("activeScan", JSON.stringify(scanData));
+
+    setMessage('Scan started. Redirecting...', 'success');
+
+    window.location.href = buildScanningPageUrl(scanData);
+
+  } catch (err) {
+
+    console.error(err);
+    setMessage(err.message || 'Failed to start scan.', 'error');
+
+    // re-enable button if something failed
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Run Scan";
+    }
+
+  }
+};
+const startScanJob = async (accountId, region) => {
+  try {
+    const response = await fetchWithAuth(`${BASE_URL}/api/scanner/start/`, {
+      method: 'POST',
+      body: JSON.stringify({
+        cloud_account_id: accountId,
+        region: region, // "ALL" goes straight to backend, backend handles it
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.detail || payload?.error || payload?.message || 'Failed to start the scan.'
+      );
+    }
+
+    const newJobId =
+      payload?.scan_id || null
+
+
+    if (!newJobId) {
+      throw new Error('Scan start response missing job identifier.');
+    }
+
+    return newJobId;
+
+  } catch (error) {
+    setMessage(error?.message || 'Unable to start scan.', 'error');
+    return null;
+  }
 };
 
+/* =========================
+   EVENT HANDLERS
+========================= */
 const handleAccountClick = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
   const button = event.target.closest('button[data-account-id]');
   if (!button) return;
+
+
   const action = button.dataset.action || 'run-scan';
   if (action === 'view-report') {
     const accountId = button.dataset.accountId;
@@ -448,42 +613,34 @@ const handleAccountClick = (event) => {
     region: regionSelect?.value,
     accountName: button.dataset.accountName,
     providerName: button.dataset.provider,
+    button: button,
   });
 };
 
+/* =========================
+   DATA LOADING
+========================= */
 const loadAccounts = async () => {
   try {
     const payload = await fetchJson(`${BASE_URL}/api/accounts/cloud-accounts/`, { method: 'GET' });
-    accounts = Array.isArray(payload) ? payload : [];
+    dashboardState.accounts = Array.isArray(payload) ? payload : [];
     updateStats();
-    return accounts;
+    return dashboardState.accounts;
   } catch (error) {
     setMessage(error.message || 'Failed to load cloud accounts.', 'error');
-    accounts = [];
+    dashboardState.accounts = [];
     renderAccounts();
     updateStats();
-    return accounts;
+    return dashboardState.accounts;
   }
 };
 
-const loadHistory = async () => {
-  try {
-    const payload = await fetchJson(`${BASE_URL}/api/scanner/scan/history/`, { method: 'GET' });
-    history = Array.isArray(payload) ? payload : [];
-    updateStats();
-    return history;
-  } catch (error) {
-    setMessage(error.message || 'Failed to load scan history.', 'error');
-    history = [];
-    updateStats();
-    renderAccounts();
-    return history;
-  }
-};
-
+/* =========================
+   INITIALIZATION
+========================= */
 const init = async () => {
   requireAuth();
-  await Promise.all([loadAccounts(), loadHistory()]);
+  await Promise.all([loadAccounts(), loadStats()]);
   renderAccounts();
   accountsListEl?.addEventListener('click', handleAccountClick);
 };

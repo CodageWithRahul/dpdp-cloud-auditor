@@ -1,87 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Add Cloud Account ? Cloud Auditor</title>
-  <link rel="stylesheet" href="../css/app.css">
-  <link rel="stylesheet" href="../css/add_account.css">
-  <link rel="stylesheet" href="../components/loader/loader.css">
-
-</head>
-<body>
-  <div class="page-shell">
-    <div id="shell-nav"></div>
-    <main class="main-content">
-      <section class="panel add-account-panel">
-        <div class="section-head">
-          <div>
-            <h1>Add Cloud Account</h1>
-            <p>Connect a cloud provider so the auditor can reach your environment.</p>
-          </div>
-        </div>
-        <form id="account-form" class="account-form">
-          <label for="provider-select">Cloud provider</label>
-          <select id="provider-select" class="select-control" required>
-            <option value="AWS">Amazon Web Services</option>
-            <option value="AZURE">Microsoft Azure</option>
-            <option value="GCP">Google Cloud Platform</option>
-          </select>
-
-          <label for="account-name">Account name</label>
-          <input id="account-name" class="form-control" type="text" placeholder="Production account" required>
-
-          <div class="credential-sections">
-            <div class="form-section" data-provider-section="AWS">
-              <h3>AWS credentials</h3>
-              <p class="form-hint">Provide the access/secret key pair that the scanner can assume.</p>
-              <label for="access-key">Access key</label>
-              <input id="access-key" class="form-control" type="text" placeholder="AKIA..." autocomplete="off" required>
-              <label for="secret-key">Secret key</label>
-              <input id="secret-key" class="form-control" type="password" placeholder="********" autocomplete="off" required>
-            </div>
-            <div class="form-section" data-provider-section="AZURE" hidden>
-              <h3>Azure credentials</h3>
-              <p class="form-hint">Use a Contributor-level service principal.</p>
-              <label for="tenant-id">Tenant ID</label>
-              <input id="tenant-id" class="form-control" type="text" autocomplete="off" required>
-              <label for="client-id">Client ID</label>
-              <input id="client-id" class="form-control" type="text" autocomplete="off" required>
-              <label for="client-secret">Client secret</label>
-              <input id="client-secret" class="form-control" type="password" autocomplete="off" required>
-              <label for="subscription-id">Subscription ID</label>
-              <input id="subscription-id" class="form-control" type="text" autocomplete="off" required>
-            </div>
-            <div class="form-section" data-provider-section="GCP" hidden>
-              <h3>GCP credentials</h3>
-              <p class="form-hint">Upload or paste a service account JSON key.</p>
-              <label for="gcp-file">Upload JSON key</label>
-              <input id="gcp-file" class="form-control" type="file" accept=".json">
-              <label for="gcp-json">Or paste JSON</label>
-              <textarea id="gcp-json" class="form-control" rows="5" placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'></textarea>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add Cloud Account ? Cloud Auditor</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/add_account.css">
+    <link rel="stylesheet" href="../components/loader/loader.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <div id="shell-nav"></div>
+      <main class="main-content">
+        <section class="panel add-account-panel">
+          <div class="section-head">
+            <div>
+              <h1>Add Cloud Account</h1>
+              <p>Connect a cloud provider so the auditor can reach your environment.</p>
             </div>
           </div>
-
-          <div class="form-actions">
-            
-            <a class="btn secondary back-btn" href="cloud_accounts.html">Back</a>
-            <button type="submit" class="btn primary">Save account</button>
-          </div>
-          <p id="form-message" class="message" aria-live="polite"></p>
-        </form>
-      </section>
-    </main>
-    <div id="shell-footer"></div>
-  </div>
-
-
-  <script type="module">
-    import { initShell } from '../js/layout.js';
-    initShell('cloud-accounts');
-  </script>
-  <script type="module" src="../components/loader/loader.js"></script>
-  <script type="module" src="../js/add_account.js"></script>
-
-</body>
+          <form id="account-form" class="account-form">
+            <label for="provider-select">Cloud provider</label>
+            <select id="provider-select" class="select-control" required>
+              <option value="AWS">Amazon Web Services</option>
+              <option value="AZURE">Microsoft Azure</option>
+              <option value="GCP">Google Cloud Platform</option>
+            </select>
+            <div class="guide-link-wrapper">
+              <a id="guide-link" class="guide-link disabled" href="#" target="_blank">
+                Steps to get credentials
+                <span id="provider-pill" class="provider-pill">—</span>
+              </a>
+            </div>
+            <label for="account-name">Account name</label>
+            <input id="account-name"
+                   class="form-control"
+                   type="text"
+                   placeholder="Production account"
+                   required>
+            <div class="credential-sections">
+              <div class="form-section" data-provider-section="AWS">
+                <h3>AWS credentials</h3>
+                <p class="form-hint">Provide the access/secret key pair that the scanner can assume.</p>
+                <label for="access-key">Access key</label>
+                <input id="access-key"
+                       class="form-control"
+                       type="text"
+                       placeholder="AKIA..."
+                       autocomplete="off"
+                       required>
+                <label for="secret-key">Secret key</label>
+                <input id="secret-key"
+                       class="form-control"
+                       type="password"
+                       placeholder="********"
+                       autocomplete="off"
+                       required>
+              </div>
+              <div class="form-section" data-provider-section="AZURE" hidden>
+                <h3>Azure credentials</h3>
+                <p class="form-hint">Use a Contributor-level service principal.</p>
+                <label for="tenant-id">Tenant ID</label>
+                <input id="tenant-id"
+                       class="form-control"
+                       type="text"
+                       autocomplete="off"
+                       required>
+                <label for="client-id">Client ID</label>
+                <input id="client-id"
+                       class="form-control"
+                       type="text"
+                       autocomplete="off"
+                       required>
+                <label for="client-secret">Client secret</label>
+                <input id="client-secret"
+                       class="form-control"
+                       type="password"
+                       autocomplete="off"
+                       required>
+                <label for="subscription-id">Subscription ID</label>
+                <input id="subscription-id"
+                       class="form-control"
+                       type="text"
+                       autocomplete="off"
+                       required>
+              </div>
+              <div class="form-section" data-provider-section="GCP" hidden>
+                <h3>GCP credentials</h3>
+                <p class="form-hint">Upload or paste a service account JSON key.</p>
+                <label for="gcp-file">Upload JSON key</label>
+                <input id="gcp-file" class="form-control" type="file" accept=".json">
+                <label for="gcp-json">Or paste JSON</label>
+                <textarea id="gcp-json"
+                          class="form-control"
+                          rows="5"
+                          placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'></textarea>
+              </div>
+            </div>
+            <div class="form-actions">
+              <a class="btn secondary back-btn" href="cloud_accounts.html">Back</a>
+              <button type="submit" class="btn primary">Save account</button>
+            </div>
+            <p id="form-message" class="message" aria-live="polite"></p>
+          </form>
+        </section>
+      </main>
+      <div id="shell-footer"></div>
+    </div>
+    <script type="module">
+        import {
+            initShell
+        } from '../js/layout.js';
+        initShell('cloud-accounts');
+    </script>
+    <script type="module" src="../components/loader/loader.js"></script>
+    <script type="module" src="../js/add_account.js"></script>
+  </body>
 </html>
-

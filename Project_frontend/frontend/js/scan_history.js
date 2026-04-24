@@ -31,11 +31,28 @@ const normalizeProvider = (scan) =>
 
 const getScanDateValue = (scan) => scan.end_time || scan.start_time || scan.created_at || "";
 
+const normalizeRegions = (scan) => {
+  const regions = scan.region || [];
+
+  if (regions.length === 0) return "n/a";
+
+  if (regions.length === 1) return regions[0];
+
+  const extra = regions.length - 1;
+
+  return `
+    <span class="region-main">${regions[0]}</span>
+    <span class="region-pill">+${extra}</span>
+  `;
+};
+
+
+
 const renderRows = (scans = []) => {
   if (!historyBody) return;
   historyBody.innerHTML = "";
   if (!scans.length) {
-    historyBody.innerHTML = "<tr><td colspan=\"7\" class=\"empty-row\">No scans recorded yet.</td></tr>";
+    historyBody.innerHTML = "<tr><td colspan=\"8\" class=\"empty-row\">No scans recorded yet.</td></tr>";
     return;
   }
 
@@ -45,10 +62,13 @@ const renderRows = (scans = []) => {
       new Date(getScanDateValue(a) || 0)
   );
   sorted.forEach((scan) => {
+    // console.log(scan);
+
     const row = document.createElement("tr");
     const jobId = scan.scan_id || scan.scan_job_id || scan.job_id || scan.id || "none";
     const account =  scan.cloud_account || "n/a";
     const provider = normalizeProvider(scan) || "�";
+    const region = normalizeRegions(scan) || "�";
     const statusText = statusLabel(scan.status);
     const issues = scan.issues_found ?? scan.findings_count ?? scan.findings ?? 0;
     const date = scan.end_time || scan.start_time || scan.created_at || "�";
@@ -61,12 +81,13 @@ const renderRows = (scans = []) => {
       <td>${jobId}</td>
       <td>${account}</td>
       <td>${provider}</td>
+      <td>${region}</td>
       <td></td>
       <td>${issues}</td>
       <td>${parsed}</td>
       <td></td>`;
-    row.querySelector("td:nth-child(4)")?.appendChild(chip);
-    const actionCell = row.querySelector("td:nth-child(7)");
+    row.querySelector("td:nth-child(5)")?.appendChild(chip);
+    const actionCell = row.querySelector("td:nth-child(8)");
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn ghost";
@@ -81,19 +102,68 @@ const renderRows = (scans = []) => {
   });
 };
 
-const loadHistory = async () => {
+let currentPage = 1;
+let nextPage = null;
+let prevPage = null;
+const loadHistory = async (page = 1) => {
   try {
-    const response = await fetchWithAuth(BASE_URL + "/api/scanner/scan/history/", { method: "GET" });
+    const response = await fetchWithAuth(
+      `${BASE_URL}/api/scanner/scan/history/?page=${page}`,
+      { method: "GET" }
+    );
+
     const payload = await response.json();
+
     if (!response.ok) {
       throw new Error(payload?.detail || "Unable to load scan history.");
     }
-    historyCache = Array.isArray(payload) ? payload : [];
+
+    const results = payload?.results || [];
+
+    historyCache = results;
     renderRows(historyCache);
+
+    // 🔥 update pagination state
+    currentPage = page;
+    nextPage = payload.next;
+    prevPage = payload.previous;
+
+    updatePaginationUI();
+
   } catch (error) {
-    historyBody.innerHTML = "<tr><td colspan=\"7\" class=\"empty-row\">Failed to load history.</td></tr>";
+    console.error(error);
+    historyBody.innerHTML =
+      '<tr><td colspan="8" class="empty-row">Failed to load history.</td></tr>';
   }
 };
+
+const updatePaginationUI = () => {
+  const prevBtn = document.getElementById("prev-page-btn");
+  const nextBtn = document.getElementById("next-page-btn");
+  const pageInfo = document.getElementById("page-info");
+
+  if (pageInfo) {
+    pageInfo.textContent = `Page ${currentPage}`;
+  }
+
+  if (prevBtn) {
+    prevBtn.disabled = !prevPage;
+  }
+
+  if (nextBtn) {
+    nextBtn.disabled = !nextPage;
+  }
+};
+
+document.getElementById("next-page-btn")?.addEventListener("click", () => {
+  if (!nextPage) return;
+  loadHistory(currentPage + 1);
+});
+
+document.getElementById("prev-page-btn")?.addEventListener("click", () => {
+  if (!prevPage) return;
+  loadHistory(currentPage - 1);
+});
 
 const matchesProvider = (scan, filterValue) => {
   if (!filterValue) return true;

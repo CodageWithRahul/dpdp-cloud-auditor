@@ -1,6 +1,7 @@
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Sum
 from django.utils import timezone
 import threading
+import inspect
 
 from typing import Sequence
 
@@ -10,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
+from .pagination import ScanHistoryPagination
 from accounts.models import CloudAccount
 from accounts.services.region_selector import get_regions
 from .models import Finding, ScanJob, ScanJobLog
@@ -26,7 +28,6 @@ from scanner.services.gcp_scanner import run_gcp_scan
 
 
 class StartScanView(APIView):
-
     permission_classes = [IsAuthenticated]
     serializer_class = StartScanSerializer
 
@@ -50,8 +51,11 @@ class StartScanView(APIView):
         scan_job.log("Scan job marked as RUNNING.")
 
         scan_all = serializer.validated_data.get("scan_all_regions", False)
+
         requested_regions = list(serializer.validated_data.get("regions") or [])
+
         single_region = serializer.validated_data.get("region")
+
         if single_region:
             normalized = single_region.strip()
             if normalized:
@@ -88,26 +92,6 @@ class StartScanView(APIView):
             scan_job.log(message, level="ERROR")
             return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
 
-        # try:
-        #     summary = run_scan(scan_job, account, regions=regions)
-        # except RuntimeError as exc:
-        #     scan_job.status = "FAILED"
-        #     scan_job.completed_at = timezone.now()
-        #     scan_job.save(update_fields=["status", "completed_at"])
-        #     scan_job.log(f"Scan failed: {exc}", level="ERROR")
-        #     return Response(
-        #         {"error": str(exc)},
-        #         status=status.HTTP_502_BAD_GATEWAY,
-        #     )
-
-        # interrupted = summary.get("interrupted") or scan_job.cancel_requested
-        # scan_job.total_resources = summary["scanned_resources"]
-        # scan_job.issues_found = summary["issues_found"]
-        # scan_job.completed_at = timezone.now()
-        # scan_job.status = "INTERRUPTED" if interrupted else "COMPLETED"
-        # scan_job.save()
-        print("running Thread")
-
         thread = threading.Thread(
             target=background_scan,
             args=(scan_job.id, account, regions, run_scan),
@@ -115,7 +99,6 @@ class StartScanView(APIView):
         )
 
         thread.start()
-        print("Return")
 
         return Response(
             {
@@ -137,7 +120,7 @@ class ScanJobLogListView(ListAPIView):
         return ScanJobLog.objects.filter(
             scan_job__id=scan_job_id,
             scan_job__cloud_account__user=self.request.user,
-        ).order_by("-created_at")
+        ).order_by("created_at")
 
 
 class ScanJobFindingListView(ListAPIView):
@@ -155,13 +138,15 @@ class ScanJobFindingListView(ListAPIView):
 class ScanHistory(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ScanHistorySerializer
+    pagination_class = ScanHistoryPagination
 
     def get_queryset(self):
+
         region_log_prefetch = Prefetch(
             "logs",
             queryset=ScanJobLog.objects.filter(
                 message__startswith="Target regions:"
-            ).order_by("created_at"),
+            ).order_by("-created_at")[:3],
             to_attr="target_region_logs",
         )
 
@@ -170,6 +155,28 @@ class ScanHistory(ListAPIView):
             .prefetch_related(region_log_prefetch, "cloud_account__regions")
             .filter(cloud_account__user=self.request.user)
             .order_by("-started_at")
+        )
+
+
+class ScanStats(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        scans = ScanJob.objects.filter(cloud_account__user=request.user)
+
+        total_scans = scans.count()
+        last_scan = scans.order_by("-started_at").first()
+
+        total_findings = Finding.objects.filter(
+            scan_job__cloud_account__user=request.user
+        ).count()
+
+        return Response(
+            {
+                "total_scans": total_scans,
+                "total_findings": total_findings,
+                "last_scan_status": last_scan.status if last_scan else None,
+            }
         )
 
 
@@ -205,23 +212,82 @@ class StopScanView(APIView):
         )
 
 
+class ScanStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, scan_job_id):
+        try:
+            scan_job = ScanJob.objects.select_related("cloud_account").get(
+                id=scan_job_id, cloud_account__user=request.user
+            )
+        except ScanJob.DoesNotExist:
+            return Response({"error": "Scan job not found"}, status=404)
+
+        return Response(
+            {
+                "scan_id": scan_job.id,
+                "status": scan_job.status,
+                "cancel_requested": scan_job.cancel_requested,
+            }
+        )
+
+
+class ScanMetadataView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, scan_job_id):
+        try:
+            scan_job = ScanJob.objects.select_related("cloud_account").get(
+                id=scan_job_id, cloud_account__user=request.user
+            )
+        except ScanJob.DoesNotExist:
+            return Response({"error": "Scan job not found"}, status=404)
+        return Response(
+            {
+                "scan_id": scan_job.id,
+                "account_name": scan_job.cloud_account.account_name,
+                "provider": scan_job.cloud_account.provider,
+                "region": scan_job.target_regions,
+            }
+        )
+
+
 def background_scan(scan_job_id, account, regions, run_scan):
     scan_job = ScanJob.objects.get(id=scan_job_id)
 
     try:
+        scan_job.log("Background scan started.", level="INFO")
+
         summary = run_scan(scan_job, account, regions=regions)
 
         interrupted = summary.get("interrupted") or scan_job.cancel_requested
-        scan_job.total_resources = summary["scanned_resources"]
-        scan_job.issues_found = summary["issues_found"]
+
+        scan_job.total_resources = summary.get("scanned_resources", 0)
+        scan_job.issues_found = summary.get("issues_found", 0)
+
         scan_job.completed_at = timezone.now()
         scan_job.status = "INTERRUPTED" if interrupted else "COMPLETED"
-        scan_job.save()
+
+        scan_job.save(
+            update_fields=[
+                "total_resources",
+                "issues_found",
+                "completed_at",
+                "status",
+            ]
+        )
+
+        if interrupted:
+            scan_job.log("Scan interrupted by user.", level="WARNING")
+        else:
+            scan_job.log("Scan completed successfully.", level="INFO")
 
     except RuntimeError as exc:
         scan_job.status = "FAILED"
         scan_job.completed_at = timezone.now()
+
         scan_job.save(update_fields=["status", "completed_at"])
+
         scan_job.log(f"Scan failed: {exc}", level="ERROR")
 
 
@@ -248,6 +314,7 @@ def _resolve_scan_regions(
     scan_all: bool = False,
     scan_job: ScanJob | None = None,
 ) -> list[str]:
+
     normalized = _normalize_regions(requested)
     if normalized and not scan_all:
         return normalized

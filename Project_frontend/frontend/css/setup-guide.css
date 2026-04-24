@@ -1,0 +1,93 @@
+.guide-page {
+    padding: 30px;
+}
+
+.guide-container {
+    max-width: 800px;
+    margin: auto;
+}
+
+.guide-subtitle {
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+
+/* Steps */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.step-card {
+    background: var(--panel-bg);
+    /* matches your panels */
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.step-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Step header */
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step-number {
+    background: #4f46e5;
+    color: white;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+}
+
+.step-title {
+    font-weight: 600;
+}
+
+/* Description */
+.step-desc {
+    margin-top: 8px;
+    color: #4b5563;
+}
+
+/* Highlight */
+.highlight {
+    margin-top: 10px;
+    background: #343c56;
+    padding: 8px;
+    border-radius: 10px;
+    font-weight: 500;
+    width: fit-content;
+}
+
+/* Action button */
+.step-action {
+    margin-top: 12px;
+}
+
+.step-action button {
+    padding: 8px 12px;
+    border: none;
+    background: #4f46e5;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.guide-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.guide-actions {
+  display: flex;
+  justify-content: flex-end; /* align right like forms */
+}

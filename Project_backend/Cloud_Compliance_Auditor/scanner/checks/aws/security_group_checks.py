@@ -25,17 +25,44 @@ def check_open_security_groups(session):
 
     for group in groups:
         group_id = group["GroupId"]
+
         for permission in group.get("IpPermissions", []):
+
+            from_port = permission.get("FromPort", -1)
+            to_port = permission.get("ToPort", -1)
+            protocol = permission.get("IpProtocol")
+
             for ip_range in permission.get("IpRanges", []):
                 cidr = ip_range.get("CidrIp")
-                if cidr == "0.0.0.0/0":
+
+                # 1. FULL INTERNET ACCESS
+                if cidr in ["0.0.0.0/0", "::/0"]:
+
+                    severity = "HIGH"
+
+                    # 2. CRITICAL PORTS
+                    if from_port in [22, 3389]:
+                        severity = "CRITICAL"
+
+                    # 3. ALL PORTS OPEN
+                    if from_port == 0 and to_port == 65535:
+                        severity = "CRITICAL"
+
+                    # 4. ALL PROTOCOLS
+                    if protocol == "-1":
+                        severity = "CRITICAL"
+
                     issue = build_issue(
-                        "Open security group",
-                        "The security group allows ingress from the entire Internet.",
-                        "Narrow the CIDR blocks to specific IPs or ranges.",
-                        severity="HIGH",
+                        "Overly permissive security group",
+                        f"Security group allows open access from {cidr}.",
+                        "Restrict inbound rules to specific IP ranges and required ports only.",
+                        severity=severity,
                     )
-                    issue.update({"resource_type": "Security Group", "resource_id": group_id})
+
+                    issue.update(
+                        {"resource_type": "Security Group", "resource_id": group_id}
+                    )
+
                     findings.append(issue)
                     break
 

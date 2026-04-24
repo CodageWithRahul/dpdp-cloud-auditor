@@ -82,7 +82,9 @@ def run_all_checks(context, log=None, stop_requested=None):
         for finding in raw_findings:
             finding.setdefault("service_name", service_name)
             finding.setdefault("status", "FAIL")
-            finding.setdefault("check_title", finding.get("issue_type") or "Unnamed check")
+            finding.setdefault(
+                "check_title", finding.get("issue_type") or "Unnamed check"
+            )
             finding.setdefault("check_id", _build_check_id(module, finding))
 
         findings.extend(raw_findings)

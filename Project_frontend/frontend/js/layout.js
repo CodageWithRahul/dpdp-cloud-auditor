@@ -1,4 +1,6 @@
 import { BASE_URL, fetchWithAuth, clearTokens } from './api.js';
+import { startScanMonitor } from "./scanMonitor.js";
+
 
 const navLinks = [
   { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html' },
@@ -7,36 +9,40 @@ const navLinks = [
   { id: 'reports', label: 'Reports', href: 'report.html' },
 ];
 
+
 const buildNav = (active) => `
 <header class="top-nav">
   <div class="brand-logo">
-    <p class="eyebrow">Security Console</p>
-    <h1>Cloud Auditor</h1>
+    <img src="../imgs/logo.png" alt="DPDP Cloud Auditor" class="logo-img">
   </div>
   <button class="nav-toggle" type="button" aria-label="Toggle navigation">
     <span></span>
     <span></span>
     <span></span>
   </button>
+
   <nav class="primary-nav">
     ${navLinks
-      .map(
-        (link) =>
-          `<a class="nav-link${link.id === active ? ' active' : ''}" href="${link.href}">${link.label}</a>`
-      )
-      .join('')}
+    .map(
+      (link) =>
+        `<a class="nav-link${link.id === active ? ' active' : ''}" href="${link.href}">${link.label}</a>`
+    )
+    .join('')}
     <div class="nav-user-mobile">
       <a id="user-name-mobile" class="user-link" href="user_details.html">Security Analyst</a>
       <button class="btn ghost" id="logout-button-mobile">Logout</button>
     </div>
+    
   </nav>
   <div class="nav-user">
+   ${scanIndicator}
     <div>
       <a id="user-name" class="user-link" href="user_details.html">Security Analyst</a>
     </div>
     <button class="btn ghost" id="logout-button">Logout</button>
   </div>
 </header>`;
+
 
 const renderNav = (active) => {
   const root = document.getElementById('shell-nav');
@@ -135,3 +141,25 @@ export const initShell = (activePage = 'dashboard') => {
   attachLogout();
   attachNavToggle();
 };
+
+
+try {
+  const activeScan = JSON.parse(localStorage.getItem("activeScan"));
+
+  if (activeScan?.jobId) {
+    startScanMonitor();
+  }
+} catch (e) {
+  console.warn("Invalid activeScan in storage");
+}
+
+const activeScan = JSON.parse(localStorage.getItem("activeScan") || "null");
+
+const scanIndicator = activeScan
+  ? `
+  <a class="scan-indicator" href="scanning.html?scan_job_id=${activeScan.jobId}">
+      <span class="scan-loader"></span>
+      <span class="scan-text">Scan #${activeScan.jobId}</span>
+  </a>
+  `
+  : "";
