@@ -11,3 +11,5 @@ db.sqlite3
 *.log
 *.pot
 *.vscode
+py files/
+inner files in frontend folder/

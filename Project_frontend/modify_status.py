@@ -1,1 +1,0 @@
-  if (!label) return 'pending'; 
