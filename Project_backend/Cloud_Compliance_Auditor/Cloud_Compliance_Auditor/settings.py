@@ -47,13 +47,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "report",
-    "axes",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "axes.middleware.AxesMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
