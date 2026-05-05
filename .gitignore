@@ -13,3 +13,4 @@ db.sqlite3
 *.vscode
 py files/
 inner files in frontend folder/
+exclude/

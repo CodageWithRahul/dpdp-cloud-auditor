@@ -1,5 +1,0 @@
-*** Begin Patch 
-*** Update File: js/accounts.js 
-@@ 
--const statusBadge = (status) =
--  const normalized = (status || \" "\).toString().toLowerCase(); 
