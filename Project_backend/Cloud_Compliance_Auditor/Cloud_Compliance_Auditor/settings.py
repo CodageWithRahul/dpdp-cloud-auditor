@@ -25,13 +25,15 @@ CLOUD_CREDENTIAL_ENCRYPTION_KEY = os.getenv("CLOUD_CREDENTIAL_ENCRYPTION_KEY")
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-=9h-z9w^f*$(m^!bw!)b(2y*0u#%d4sv!7_zyh3@0kx88$_wh#"
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-for-dev-only")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
+if not DEBUG:
+    ALLOWED_HOSTS.append(os.getenv("BACKEND_HOST"))
 
 # Application definition
 
@@ -134,9 +136,14 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5500",
-]
+CORS_ALLOWED_ORIGINS = []
+
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "http://127.0.0.1:5500",
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "DPDP Cloud Auditor <no-reply@dpdpcloudauditor.local>"
