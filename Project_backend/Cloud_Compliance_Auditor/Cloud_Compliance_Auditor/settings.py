@@ -143,7 +143,9 @@ if DEBUG:
         "http://127.0.0.1:5500",
     ]
 else:
-    CORS_ALLOWED_ORIGINS = [os.getenv("FRONTEND_URL")]
+    CORS_ALLOWED_ORIGINS = (
+        os.getenv("FRONTEND_URL", "").split(",") if os.getenv("FRONTEND_URL") else []
+    )
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "DPDP Cloud Auditor <no-reply@dpdpcloudauditor.local>"
