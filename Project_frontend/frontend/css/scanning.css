@@ -17,20 +17,22 @@
 }
 
 .region-pill {
-    display: inline-block;
-    margin-left: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgb(59, 130, 246);
-    vertical-align: middle;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(59, 130, 246, 0.15);
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgba(59, 130, 246, 0.35);
-    border-image: initial;
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(59, 130, 246);
+  vertical-align: middle;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(59, 130, 246, 0.35);
+  border-image: initial;
 }
+
+
 
 
 
@@ -106,26 +108,44 @@
   background: rgba(2, 6, 23, 0.92);
   padding: 1.25rem;
 }
+.scan-progress-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
 
 .scan-progress-track {
+  flex: 1;
   height: 14px;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
-  margin-bottom: 0.85rem;
+  
 }
 
-.scan-progress-fill {
-  width: 52%;
-  height: 100%;
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.8), rgba(16, 185, 129, 0.9));
-  animation: scan-progress 2.8s ease-in-out infinite alternate;
+.scan-progress-fill_value {
+  min-width: 35px;      /* keeps alignment stable */
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
 }
+
+
+
+.scan-progress-fill {
+  width: 0%;
+  height: 100%;
+  transition: width 0.6s ease;
+  background-color: #213dbb;
+}
+
 
 @keyframes scan-progress {
   from {
     width: 42%;
   }
+
   to {
     width: 85%;
   }

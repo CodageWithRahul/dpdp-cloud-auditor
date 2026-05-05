@@ -1,7 +1,8 @@
 from django.db.models import Prefetch, Sum
 from django.utils import timezone
 import threading
-import inspect
+from googleapiclient.errors import HttpError
+
 
 from typing import Sequence
 
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.core.cache import cache
 
 from .pagination import ScanHistoryPagination
 from accounts.models import CloudAccount
@@ -223,11 +225,21 @@ class ScanStatusView(APIView):
         except ScanJob.DoesNotExist:
             return Response({"error": "Scan job not found"}, status=404)
 
+        # -------------------------------
+        # GET PROGRESS FROM CACHE
+        # -------------------------------
+        progress_data = cache.get(f"scan_progress_{scan_job_id}", {})
+
         return Response(
             {
                 "scan_id": scan_job.id,
                 "status": scan_job.status,
                 "cancel_requested": scan_job.cancel_requested,
+                "progress": progress_data.get("progress", 0),
+                "completed_units": progress_data.get("completed_units", 0),
+                "total_units": progress_data.get("total_units", 0),
+                "current_service": progress_data.get("current_service"),
+                "current_region": progress_data.get("current_region"),
             }
         )
 
@@ -254,6 +266,10 @@ class ScanMetadataView(APIView):
 
 def background_scan(scan_job_id, account, regions, run_scan):
     scan_job = ScanJob.objects.get(id=scan_job_id)
+
+    print(
+        f"Starting background scan for job {scan_job_id} on account {account.account_name} with regions: {regions}"
+    )
 
     try:
         scan_job.log("Background scan started.", level="INFO")
@@ -282,13 +298,30 @@ def background_scan(scan_job_id, account, regions, run_scan):
         else:
             scan_job.log("Scan completed successfully.", level="INFO")
 
-    except RuntimeError as exc:
+    # ✅ Handle GCP-specific errors
+    except HttpError as exc:
+        message = str(exc)
+
+        if "has been deleted" in message:
+            reason = "GCP project has been deleted."
+        elif "permission" in message.lower():
+            reason = "Permission denied. Check IAM roles."
+        else:
+            reason = "GCP API error occurred."
+
         scan_job.status = "FAILED"
         scan_job.completed_at = timezone.now()
 
         scan_job.save(update_fields=["status", "completed_at"])
+        scan_job.log(f"Scan failed: {reason}", level="ERROR")
 
-        scan_job.log(f"Scan failed: {exc}", level="ERROR")
+    # ✅ Catch everything else (IMPORTANT)
+    except Exception as exc:
+        scan_job.status = "FAILED"
+        scan_job.completed_at = timezone.now()
+
+        scan_job.save(update_fields=["status", "completed_at"])
+        scan_job.log(f"Scan failed: {str(exc)}", level="ERROR")
 
 
 def _normalize_regions(regions: Sequence[str] | None) -> list[str]:
@@ -327,7 +360,7 @@ def _resolve_scan_regions(
     if db_regions:
         return db_regions
 
-    credentials = account.credentials or {}
+    credentials = account.get_credentials() or {}
     fetched_regions, error = get_regions(account.provider, credentials)
     if fetched_regions:
         cleaned = [

@@ -43,29 +43,34 @@ class CloudAccountListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        accounts = CloudAccount.objects.filter(user_id=request.user.id, is_active=True)
+        accounts = CloudAccount.objects.filter(user=request.user, is_active=True)
 
         serializer = self.serializer_class(accounts, many=True)
-
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
         )
+
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        data = serializer.validated_data
-        credentials = data.get("credentials") or {}
+        # 🔥 validate credentials BEFORE saving (provider-specific check)
+        provider = serializer.validated_data.get("provider")
+        credentials = serializer.validated_data.get("credentials") or {}
 
-        is_valid, error = validate_credentials(data["provider"], credentials)
+        is_valid, error = validate_credentials(provider, credentials)
 
         if not is_valid:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer.save(user=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # 🔥 ALL logic (duplicate check + encryption + hash) handled inside serializer
+        account = serializer.save(user=request.user)
+
+        return Response(
+            self.serializer_class(account).data, status=status.HTTP_201_CREATED
+        )
 
 
 class CloudAccountDetailView(APIView):
@@ -121,7 +126,7 @@ class CloudAccountRegionsView(APIView):
         except CloudAccount.DoesNotExist:
             return Response({"error": "Cloud account not found"}, status=404)
 
-        regions, error = get_regions(account.provider, account.credentials or {})
+        regions, error = get_regions(account.provider, account.get_credentials() or {})
 
         if error:
             return Response({"error": error}, status=400)
@@ -205,7 +210,7 @@ class ConnectionStatusView(APIView):
         try:
             account = CloudAccount.objects.get(id=pk, user=request.user)
 
-            credentials = account.credentials or {}
+            credentials = account.get_credentials() or {}
             is_valid, error = validate_credentials(account.provider, credentials)
             regions, regions_error = get_regions(account.provider, credentials)
             regions = regions or []

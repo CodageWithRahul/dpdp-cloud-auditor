@@ -37,6 +37,65 @@
   color: #9ca3af;
 }
 
+.gcp-warning {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+
+  margin-top: 14px;
+  padding: 14px 16px;
+
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff7ed, #fffbeb);
+  border: 1px solid #fed7aa;
+
+  animation: fadeIn 0.3s ease;
+}
+
+.gcp-warning.hidden {
+  display: none;
+}
+
+.gcp-warning-icon {
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.gcp-warning-content strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 4px;
+  color: #92400e;
+}
+
+.gcp-warning-content p {
+  font-size: 13px;
+  color: #78350f;
+  margin-bottom: 6px;
+}
+
+.gcp-warning-content a {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.gcp-warning-content a:hover {
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .provider-pill.aws {
   background: rgba(255, 153, 0, 0.15);
   color: #ff9900;

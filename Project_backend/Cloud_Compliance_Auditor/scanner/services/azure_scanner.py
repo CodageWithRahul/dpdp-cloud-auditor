@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_azure_scan(scan_job, account, regions=None):
-    credentials = account.credentials or {}
+    credentials = account.get_credentials() or {}
     tenant_id = credentials.get("tenant_id")
     client_id = credentials.get("client_id")
     client_secret = credentials.get("client_secret")

@@ -33,6 +33,30 @@ let pollingActive = true;
 let reportTimer = null;
 let redirecting = false;
 
+let displayedProgress = 0;
+let animationFrameId = null;
+
+
+
+
+const timerEl = document.getElementById("scan-timer");
+
+let timerInterval = null;
+
+const getStartTime = () => {
+  const activeScan = JSON.parse(localStorage.getItem("activeScan") || "null");
+  return activeScan?.startTime;
+};
+
+const formatTime = (ms) => {
+  const sec = Math.floor(ms / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+
+
 const stopPolling = () => {
   pollingActive = false;
   if (pollTimer) {
@@ -143,39 +167,98 @@ const pickStatusClass = (value = '') => {
 const updateStatus = (scan) => {
 
   const label = scan?.status || 'Pending';
-
-  statusPill.textContent = label;
-
   const cssClass = pickStatusClass(label);
 
-  statusPill.classList.remove('running', 'completed', 'failed', 'pending');
+  // -------------------------------
+  // STATUS UI
+  // -------------------------------
+  statusPill.textContent = label;
 
+  statusPill.classList.remove('running', 'completed', 'failed', 'pending');
   statusPill.classList.add(cssClass);
 
-  // Keep the spinner visible only while the scan is active.
   setLiveLoaderVisibility(cssClass === 'running');
 
-  if (statusDetail) {
+  // -------------------------------
+  // PROGRESS DATA FROM API
+  // -------------------------------
+  const progress = scan.progress || 0;
+  const completed = scan.completed_units || 0;
+  const total = scan.total_units || 0;
+  const currentService = scan.current_service;
+  const currentRegion = scan.current_region;
 
-    statusDetail.textContent =
-      cssClass === 'completed'
-        ? 'Scan finished'
-        : 'Scanning cloud resources...';
+const progressBar = document.querySelector(".scan-progress-fill");
 
+// if (progressBar) {
+//   progressBar.style.width = `${progress}%`;
+//   const progressValue = document.querySelector(".scan-progress-fill_value");
+//   if (progressValue) {
+//     progressValue.textContent = `${animateProgress(progress)}%`;
+//   }
+// }
+
+if (progressBar) {
+  animateProgress(progress);
+}
+
+
+if (currentRegion) {
+  const selectedRegion = document.querySelector("#scan-region-detail");
+
+  selectedRegion.innerHTML = `
+    <span>
+      Scanning region:
+    </span>
+    <span class="region-pill">
+      ${currentRegion}
+    </span>
+  `;
+}
+  // -------------------------------
+  // DETAILS TEXT (SMART DISPLAY)
+  // -------------------------------
+ if (statusDetail) {
+
+  if (cssClass === 'completed') {
+    statusDetail.textContent = 'Scan finished';
   }
 
+  else if (currentService) {
+
+    // Smart messaging
+    statusDetail.textContent = `Scanning ${currentService}..`;
+  }
+
+  else {
+    statusDetail.textContent = `Preparing scan...`;
+  }
+}
+
+  // -------------------------------
+  // ❗ ONLY STOP WHEN TERMINAL
+  // -------------------------------
   if (!isTerminalStatus(label)) return;
 
+  // 👉 NOW stop everything (ONLY here)
   stopButton && (stopButton.disabled = true);
   stopPolling();
 
+  // Force progress to 100%
+  if (progressBar) {
+    progressBar.style.width = "100%";
+  }
+
+  // -------------------------------
+  // FINAL STATES
+  // -------------------------------
   if (cssClass === 'failed') {
     setMessage('Scan failed. Check backend logs or try again.', 'error');
     stopReportPolling();
     return;
   }
 
-  if (label.toString().toLowerCase().includes('interrupt') || label.toString().toLowerCase().includes('stop')) {
+  if (label.toLowerCase().includes('interrupt') || label.toLowerCase().includes('stop')) {
     setMessage('Scan stopped.', 'info');
     stopReportPolling();
     return;
@@ -183,7 +266,6 @@ const updateStatus = (scan) => {
 
   setMessage('Scan finished. Preparing report...', 'success');
   scheduleReportRedirect();
-
 };
 
 const refreshStatus = async () => {
@@ -346,5 +428,36 @@ const init = () => {
   pollCycle();
 
 };
+
+
+
+
+function animateProgress(target) {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+
+  const duration = 500;
+  const start = displayedProgress;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    const currentValue = Math.floor(start + (target - start) * progress);
+
+    document.querySelector(".scan-progress-fill").style.width = currentValue + "%";
+    document.querySelector(".scan-progress-fill_value").innerText = currentValue + "%";
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(update);
+    } else {
+      displayedProgress = target;
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(update);
+}
 
 init();

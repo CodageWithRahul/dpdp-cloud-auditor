@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.history.back();
       } else {
         window.location.href = "add_account.html";
-      } 
+      }
 
     });
   }
@@ -55,39 +55,61 @@ document.addEventListener("DOMContentLoaded", () => {
     },
 
     gcp: {
-      title: "Connect GCP Account",
-      steps: [
-        {
-          title: "Open Google Cloud Console",
-          description: "Login to your GCP account",
-          action: {
-            label: "Open GCP Console",
-            url: "https://console.cloud.google.com/"
-          }
-        },
-        {
-          title: "Go to Service Accounts",
-          description: "Navigate to IAM & Admin → Service Accounts"
-        },
-        {
-          title: "Create Service Account",
-          description: "Click 'Create Service Account'"
-        },
-        {
-          title: "Assign Role",
-          description: "Assign Viewer role",
-          highlight: "Viewer"
-        },
-        {
-          title: "Create Key",
-          description: "Add key → JSON"
-        },
-        {
-          title: "Download JSON",
-          description: "Upload JSON in this app"
-        }
-      ]
+  title: "Connect your GCP Account",
+  steps: [
+    {
+      title: "Open Google Cloud Console",
+      description: "Login to your Google Cloud account. Make sure you're using the correct organization.",
+      action: {
+        label: "Open Console",
+        url: "https://console.cloud.google.com/"
+      }
     },
+    {
+      title: "Select the Project",
+      description: "Choose the project you want to scan. This is important because all resources and permissions are tied to this project.",
+      tip: "Tip: You can find your project ID in the top navigation bar."
+    },
+    {
+      title: "Enable Required APIs",
+      description: "These APIs allow the scanner to read cloud configuration and security settings.",
+      highlight: `
+• Compute Engine API  
+• IAM API  
+• Cloud Resource Manager API  
+• Service Usage API
+      `,
+      action: {
+        label: "Enable APIs",
+        url: "https://console.cloud.google.com/apis/library"
+      },
+      tip: "Enabling APIs is free. Charges apply only when you use billable services."
+    },
+    {
+      title: "Create a Service Account",
+      description: "Service accounts allow secure, programmatic access to your project.",
+      action: {
+        label: "Go to Service Accounts",
+        url: "https://console.cloud.google.com/iam-admin/serviceaccounts"
+      }
+    },
+    {
+      title: "Assign Permissions",
+      description: "Grant read-only access so the scanner can analyze resources safely.",
+      highlight: "Viewer (roles/viewer)",
+      tip: "You can add more permissions later if needed for deeper scans."
+    },
+    {
+      title: "Generate JSON Key",
+      description: "Create a JSON key file for authentication.",
+      highlight: "Keys → Add Key → JSON"
+    },
+    {
+      title: "Upload to Scanner",
+      description: "Upload the JSON file here to connect your account securely."
+    }
+  ]
+},
 
     azure: {
       title: "Connect Azure Account",
@@ -150,14 +172,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       ${step.highlight ? `<div class="highlight">${step.highlight}</div>` : ""}
 
-      ${
-        step.action
-          ? `<div class="step-action">
+      ${step.action
+        ? `<div class="step-action">
                <button class="btn-primary">
                  ${step.action.label}
                </button>
              </div>`
-          : ""
+        : ""
       }
     `;
 

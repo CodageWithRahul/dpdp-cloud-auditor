@@ -32,16 +32,22 @@
                 <span id="provider-pill" class="provider-pill">—</span>
               </a>
             </div>
-            <label for="account-name">Account name</label>
+            <label for="account-name">Account Alias</label>
             <input id="account-name"
                    class="form-control"
                    type="text"
-                   placeholder="Production account"
+                   placeholder="Account Alias: my-company-prod"
                    required>
             <div class="credential-sections">
               <div class="form-section" data-provider-section="AWS">
                 <h3>AWS credentials</h3>
                 <p class="form-hint">Provide the access/secret key pair that the scanner can assume.</p>
+                <label for="aws-account-id">Account ID</label>
+                <input id="aws-account-id"
+                       class="form-control"
+                       type="text"
+                       placeholder="Enter Account ID"
+                       required>
                 <label for="access-key">Access key</label>
                 <input id="access-key"
                        class="form-control"
@@ -88,6 +94,24 @@
               <div class="form-section" data-provider-section="GCP" hidden>
                 <h3>GCP credentials</h3>
                 <p class="form-hint">Upload or paste a service account JSON key.</p>
+                <!-- ✅ ADD WARNING HERE -->
+                <div id="gcp-api-warning" class="gcp-warning hidden">
+                  <div class="gcp-warning-icon">⚠️</div>
+                  <div class="gcp-warning-content">
+                    <strong>Before you connect your GCP account</strong>
+                    <p>
+                      Make sure required APIs (Cloud Resource Manager, Compute Engine, IAM)
+                      are enabled in your project. Otherwise validation or scans may fail.
+                    </p>
+                    <a id="gcp-guide-link" href="#" target="_blank">View setup guide →</a>
+                  </div>
+                </div>
+                <label for="gcp-project-id">Project ID</label>
+                <input id="gcp-project-id"
+                       class="form-control"
+                       type="text"
+                       placeholder="Enter project ID"
+                       required>
                 <label for="gcp-file">Upload JSON key</label>
                 <input id="gcp-file" class="form-control" type="file" accept=".json">
                 <label for="gcp-json">Or paste JSON</label>
@@ -96,6 +120,10 @@
                           rows="5"
                           placeholder='{"type": "service_account", "project_id": "...", "private_key": "..."}'></textarea>
               </div>
+              <p class="form-hint">
+                Upload or paste a service account JSON key.
+                <span class="hint-link">Make sure required APIs are enabled.</span>
+              </p>
             </div>
             <div class="form-actions">
               <a class="btn secondary back-btn" href="cloud_accounts.html">Back</a>

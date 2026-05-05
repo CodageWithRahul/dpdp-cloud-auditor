@@ -1,83 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Scan in progress � Cloud Auditor</title>
-  <link rel="stylesheet" href="../css/app.css">
-  <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/scanning.css">
-</head>
-<body>
-  <div class="page-shell">
-    <div id="shell-nav"></div>
-    <main class="main-content">
-      <section class="panel scanning-panel">
-        <header class="scan-header">
-          <p class="eyebrow">Scanner</p>
-          <div class="scan-title-row">
-            <h2>
-              Scan in progress
-              <span id="live-scan-loader" class="live-scan-loader" aria-hidden="false"></span>
-            </h2>
-            <p class="muted">Your cloud scan is running. Keep this page open while the scanner completes and the report is generated.</p>
-          </div>
-        </header>
-        <div class="scan-meta">
-          <div class="scan-meta__row">
-            <p class="muted">Scan job</p>
-            <strong id="scan-job-label">–</strong>
-          </div>
-          <div class="scan-meta__row">
-            <p class="muted">Provider</p>
-            <strong id="scan-provider">–</strong>
-          </div>
-          <div class="scan-meta__row">
-            <p class="muted">Cloud account</p>
-            <strong id="scan-account">–</strong>
-          </div>
-          <div class="scan-meta__row">
-            <p class="muted">Region</p>
-            <strong id="scan-region">–</strong>
-          </div>
-          <div class="scan-meta__row">
-            <p class="muted">Status</p>
-            <strong id="scan-status-pill" class="status-chip pending">Pending</strong>
-          </div>
-          <div class="scan-meta__row">
-            <p class="muted">Details</p>
-            <strong id="scan-status-detail" class="muted">Waiting for backend</strong>
-          </div>
-        </div>
-        <div class="scan-progress-panel">
-          <div class="scan-progress-track" aria-hidden="true">
-            <div class="scan-progress-fill"></div>
-          </div>
-          <p class="muted">Scan progress updates automatically. If you selected all regions, this may take a few minutes.</p>
-        </div>
-        <div class="button-group">
-          <button id="stop-scan" class="btn secondary" type="button">Stop scan</button>
-        </div>
-        <div id="scan-page-message" class="message" aria-live="polite"></div>
-        <section class="panel scan-tip-panel">
-          <header>
-            <h3>Security tip</h3>
-            <p class="muted">We scan your cloud account for risky permissions and exposure. Keep this page open so you see the final result.</p>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scan in progress � Cloud Auditor</title>
+    <link rel="stylesheet" href="../css/app.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/scanning.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <div id="shell-nav"></div>
+      <main class="main-content">
+        <section class="panel scanning-panel">
+          <header class="scan-header">
+            <p class="eyebrow">Scanner</p>
+            <div class="scan-title-row">
+              <h2>
+                Scan in progress
+                <span id="live-scan-loader" class="live-scan-loader" aria-hidden="false"></span>
+              </h2>
+              <p class="muted">
+                Your cloud scan is running. Keep this page open while the scanner completes and the report is generated.
+              </p>
+            </div>
           </header>
-          <ul class="security-tips">
-            <li>Only use trusted credentials for scan access.</li>
-            <li>Prioritize high-severity issues first when the report loads.</li>
-            <li>Review all regions and fix risky settings as soon as possible.</li>
-          </ul>
+          <div class="scan-meta">
+            <div class="scan-meta__row">
+              <p class="muted">Scan job</p>
+              <strong id="scan-job-label">–</strong>
+            </div>
+            <div class="scan-meta__row">
+              <p class="muted">Provider</p>
+              <strong id="scan-provider">–</strong>
+            </div>
+            <div class="scan-meta__row">
+              <p class="muted">Cloud account</p>
+              <strong id="scan-account">–</strong>
+            </div>
+            <div class="scan-meta__row">
+              <p class="muted">Region</p>
+              <strong id="scan-region">–</strong>
+            </div>
+            <div class="scan-meta__row">
+              <p class="muted">Status</p>
+              <strong id="scan-status-pill" class="status-chip pending">Pending</strong>
+            </div>
+            <div class="scan-meta__row">
+              <p class="muted">Details</p>
+              <strong id="scan-status-detail" class="muted">Waiting for backend</strong>
+            </div>
+          </div>
+          <div class="scan-progress-panel">
+            <div class="scan-progress-row">
+              <div class="scan-progress-track" aria-hidden="true">
+                <div class="scan-progress-fill"></div>
+              </div>
+              <div class="scan-progress-fill_value">0%</div>
+            </div>
+            <div id="scan-region-detail" class="muted"></div>
+            <p class="muted">Scan progress updates automatically. If you selected all regions, this may take a few minutes.</p>
+          </div>
+          <div class="button-group">
+            <button id="stop-scan" class="btn secondary" type="button">Stop scan</button>
+          </div>
+          <div id="scan-page-message" class="message" aria-live="polite"></div>
+          <section class="panel scan-tip-panel">
+            <header>
+              <h3>Security tip</h3>
+              <p class="muted">
+                We scan your cloud account for risky permissions and exposure. Keep this page open so you see the final result.
+              </p>
+            </header>
+            <ul class="security-tips">
+              <li>Only use trusted credentials for scan access.</li>
+              <li>Prioritize high-severity issues first when the report loads.</li>
+              <li>Review all regions and fix risky settings as soon as possible.</li>
+            </ul>
+          </section>
         </section>
-      </section>
-    </main>
-    <div id="shell-footer"></div>
-  </div>
-  <script type="module">
-    import { initShell } from '../js/layout.js';
-    initShell('scan-history');
-  </script>
-  <script type="module" src="../js/scanning.js"></script>
-</body>
+      </main>
+      <div id="shell-footer"></div>
+    </div>
+    <script type="module">
+        import {
+            initShell
+        } from '../js/layout.js';
+        initShell('scan-history');
+    </script>
+    <script type="module" src="../js/scanning.js"></script>
+  </body>
 </html>

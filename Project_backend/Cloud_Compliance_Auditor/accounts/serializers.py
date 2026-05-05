@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import CloudAccount
 from django.contrib.auth.models import User
+from .utils.credential_hash import make_credentials_hash
 
 
 class CloudAccountSerializer(serializers.ModelSerializer):
@@ -13,6 +14,7 @@ class CloudAccountSerializer(serializers.ModelSerializer):
             "id",
             "provider",
             "account_name",
+            "account_id",
             "credentials",
             "is_active",
             "created_at",
@@ -71,26 +73,70 @@ class CloudAccountSerializer(serializers.ModelSerializer):
                 user=user, provider=provider, is_active=True
             )
             for account in existing:
-                if (account.credentials or {}) == credentials:
+                if (account.get_credentials() or {}) == credentials:
                     raise serializers.ValidationError(
                         {"credentials": "This cloud account is already added."}
                     )
 
         return attrs
 
-    # def get_connection_status(self, obj):
-    #     valid = getattr(obj, "is_connection_valid", None)
-    #     if valid is False:
-    #         return "Not connected"
-    #     return "Connected"
+    def create(self, validated_data):
+        credentials = validated_data.pop("credentials", None)
+        provider = validated_data.get("provider")
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
 
-    # def get_connection_issue(self, obj):
-    #     error = getattr(obj, "connection_issue", None)
-    #     return error if error else None
+        # 🔥 HASH-BASED DUPLICATE CHECK (ONLY PLACE IT SHOULD EXIST)
+        if user and credentials:
+            cred_hash = make_credentials_hash(provider, credentials)
 
-    # def get_is_connected(self, obj):
-    #     valid = getattr(obj, "is_connection_valid", None)
-    #     return valid if valid is not None else True
+            if CloudAccount.objects.filter(
+                user=user, provider=provider, credentials_hash=cred_hash
+            ).exists():
+                raise serializers.ValidationError(
+                    {"credentials": "This cloud account is already added."}
+                )
+
+        instance = CloudAccount(**validated_data)
+        instance.user = user
+
+        if credentials:
+            instance.credentials_hash = make_credentials_hash(provider, credentials)
+            instance.set_credentials(provider, credentials)
+
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        credentials = validated_data.pop("credentials", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if credentials is not None:
+            provider = validated_data.get("provider") or instance.provider
+
+            # 🔥 update hash also when credentials change
+            cred_hash = make_credentials_hash(provider, credentials)
+
+            # prevent duplicate on update
+            user = instance.user
+            if (
+                CloudAccount.objects.filter(
+                    user=user, provider=provider, credentials_hash=cred_hash
+                )
+                .exclude(id=instance.id)
+                .exists()
+            ):
+                raise serializers.ValidationError(
+                    {"credentials": "This cloud account already exists."}
+                )
+
+            instance.credentials_hash = cred_hash
+            instance.set_credentials(provider, credentials)
+
+        instance.save()
+        return instance
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -140,7 +186,11 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         normalized = value.lower()
         user = getattr(self, "instance", None)
-        if User.objects.filter(email__iexact=normalized).exclude(id=user.id if user else None).exists():
+        if (
+            User.objects.filter(email__iexact=normalized)
+            .exclude(id=user.id if user else None)
+            .exists()
+        ):
             raise serializers.ValidationError("This email is already taken.")
         return normalized
 

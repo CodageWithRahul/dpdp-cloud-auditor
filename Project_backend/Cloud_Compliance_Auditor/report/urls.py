@@ -6,6 +6,7 @@ from .views import (
     ScanResultDetailView,
     ScanResultListView,
     ServiceWiseReportView,
+    TopRisksView,
     export_excel_report,
     export_pdf_report,
 )
@@ -20,6 +21,11 @@ urlpatterns = [
         "<int:scan_job_id>/results/",
         ScanResultListView.as_view(),
         name="scanresult-list",
+    ),
+    path(
+        "<int:scan_job_id>/top-risks/",
+        TopRisksView.as_view(),
+        name="scanresult-top-risks",
     ),
     path("result/<int:pk>/", ScanResultDetailView.as_view(), name="scanresult-detail"),
     path(

@@ -20,6 +20,7 @@ from .services import (
     get_scan_job_for_user,
     get_scan_regions_for_jobs,
 )
+from .risk import group_scan_results, top_risks
 
 
 class ScanResultListView(ListAPIView):
@@ -27,6 +28,45 @@ class ScanResultListView(ListAPIView):
 
     serializer_class = ScanResultSerializer
     permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        grouped = request.query_params.get("grouped", "false").lower() in {
+            "true",
+            "1",
+            "yes",
+        }
+        if not grouped:
+            return super().list(request, *args, **kwargs)
+
+        queryset = self.get_queryset()
+        rows = queryset.values(
+            "check_id",
+            "check_title",
+            "severity",
+            "service_name",
+            "region",
+            "resource_id",
+            "description",
+            "status",
+        )
+
+        payload = group_scan_results(rows)
+
+        # Backward-compatible aliases for older clients that expect these names.
+        for item in payload:
+            item["affected_resource_count"] = item.get("affected_count", 0)
+            item["finding_count"] = sum((item.get("status_breakdown") or {}).values())
+            item["service_name"] = (item.get("services") or [None])[0]
+            item["check_title"] = item.get("issue_type")
+            item["remediation"] = {
+                "title": item.get("issue_type"),
+                "risk": item.get("risk"),
+                "steps": (item.get("fix") or {}).get("steps", []),
+                "difficulty": (item.get("fix") or {}).get("effort"),
+                "estimated_time": "",
+            }
+
+        return Response(payload)
 
     def get_queryset(self):
         scan_job_id = self.kwargs.get("scan_job_id")
@@ -60,6 +100,39 @@ class ScanResultListView(ListAPIView):
         ).order_by("severity_rank")
 
         return queryset
+
+
+class TopRisksView(APIView):
+    """
+    Return top N grouped risks for a scan job (deduped by check_id).
+
+    Query params:
+      - limit: 1..10 (default 5)
+      - status/severity/service_name: same filters as results endpoint
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, scan_job_id):
+        base_view = ScanResultListView()
+        base_view.request = request
+        base_view.kwargs = {"scan_job_id": scan_job_id}
+
+        queryset = base_view.get_queryset()
+        rows = queryset.values(
+            "check_id",
+            "check_title",
+            "severity",
+            "service_name",
+            "region",
+            "resource_id",
+            "description",
+            "status",
+        )
+        grouped = group_scan_results(rows)
+        limit = request.query_params.get("limit", 5)
+        payload = top_risks(grouped, limit=limit)
+        return Response(payload)
 
 
 class ScanResultDetailView(RetrieveAPIView):

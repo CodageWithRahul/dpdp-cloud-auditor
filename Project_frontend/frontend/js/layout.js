@@ -12,9 +12,11 @@ const navLinks = [
 
 const buildNav = (active) => `
 <header class="top-nav">
-  <div class="brand-logo">
+<div class="brand-logo">
+  <a href="./dashboard.html">
     <img src="../imgs/logo.png" alt="DPDP Cloud Auditor" class="logo-img">
-  </div>
+  </a>
+</div>
   <button class="nav-toggle" type="button" aria-label="Toggle navigation">
     <span></span>
     <span></span>

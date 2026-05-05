@@ -166,11 +166,11 @@ const updateStats = () => {
   const timeText = relativeTime(stats.last_scan_time);
 
   if (label === 'Idle' && timeText === 'No scans yet') {
-    lastScanInfoEl.textContent = 'Idle';
+    lastScanInfoEl.textContent = 'No scans yet';
     return;
   }
 
-  if (label === 'Idle') {
+  if (label === 'No scans yet') {
     lastScanInfoEl.textContent = timeText;
     return;
   }
@@ -379,15 +379,7 @@ const matchAccountScan = (account, scan) => {
   return scanNames.some((name) => name && name.toString().toLowerCase().trim() === normalizedAccountName);
 };
 
-// const getAccountScans = (account) =>
-//   history
-//     .filter((scan) => matchAccountScan(account, scan))
-//     .sort(
-//       (a, b) =>
-//         new Date(b.end_time || b.start_time || b.created_at || 0) -
-//         new Date(a.end_time || a.start_time || a.created_at || 0)
-//     )
-//     .slice(0, 3);
+
 const buildAccountCard = (account) => {
   const card = document.createElement('article');
   card.className = 'account-card';
@@ -407,7 +399,18 @@ const buildAccountCard = (account) => {
   const connectionError = account.connection_issue || 'Unable to connect to cloud account';
   const providerLabel = account.provider || 'Cloud';
   const providerBadge = providerLabel.toUpperCase();
-  const accountTitle = account.account_name || 'Unnamed account';
+  const accountTitle = account.account_name || account.account_id || 'Unnamed account';
+  const cloudAccountId = account.account_id || 'Unknown';
+  let idLabel = "";
+  if (providerLabel === "AWS") {
+    idLabel = "Account ID";
+  } else if (providerLabel === "GCP") {
+    idLabel = "Project ID";
+  } else if (providerLabel === "AZURE") {
+    idLabel = "Subscription ID";
+  } else {
+    idLabel = "ID";
+  }
   card.innerHTML = `
   <div class="connection-status-group">
     <button type="button" class="status-refresh" data-action="refresh-connection" aria-label="Refresh connection status" title="Refresh connection status">
@@ -423,7 +426,8 @@ const buildAccountCard = (account) => {
           <span class="provider-badge">${providerBadge}</span>
         </h4>
       </div>
-    </header>
+      </header>
+      <p class="account-id">${idLabel}: ${cloudAccountId}</p>
     <div class="account-card__info">
       ${regionMarkup}
     </div>
@@ -462,11 +466,39 @@ const buildAccountCard = (account) => {
 
 const renderAccounts = () => {
   if (!accountsListEl) return;
+
+  const headEl = document.getElementById("accounts-head");
+
   accountsListEl.innerHTML = '';
+
+  // ✅ EMPTY STATE
   if (!dashboardState.accounts.length) {
-    accountsListEl.innerHTML = '<p class="empty-row">No cloud accounts connected yet.</p>';
+    // headEl.innerHTML = `
+    //   <h3>Connected cloud accounts</h3>
+    // `;
+
+    accountsListEl.innerHTML = `
+  <div class="empty-state">
+    <p class="empty-row">You're ready to get started 🚀</p>
+    <button class="btn-primary" id="addAccountBtn">
+      Add Cloud Account
+    </button>
+  </div>
+`;
+
+    document.getElementById("addAccountBtn").addEventListener("click", () => {
+      window.location.href = "/frontend/pages/add_account.html";
+    });
     return;
   }
+
+  console.log("gfdgfdg", window.location.pathname);
+  // ✅ HAS DATA
+  headEl.innerHTML = `
+    <h3>Connected cloud accounts</h3>
+    <p>Click "Run Scan" on any account to start a fresh job.</p>
+  `;
+
   dashboardState.accounts.forEach((account) => {
     const card = buildAccountCard(account);
     accountsListEl.appendChild(card);

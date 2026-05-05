@@ -1,12 +1,14 @@
 from email import message
 import logging
 import re
+import time
 
 import boto3
 from botocore.exceptions import ClientError
 
+from scanner.utils.progress_tracker import ProgressTracker
 from scanner.service_registry.aws.aws_service_registry import get_global_services
-from scanner.runners.aws_runner import run_all_checks
+from scanner.runners.aws_runner import calculate_total_units, run_all_checks
 from scanner.utils.save_findings import persist_findings
 
 logger = logging.getLogger(__name__)
@@ -79,18 +81,20 @@ class _RegionalSession:
         return getattr(self._base_session, item)
 
 
-def run_global_checks(session, log=None, stop_requested=None):
+def run_global_checks(session, progress_tracker=None, log=None, stop_requested=None):
     return run_all_checks(
         session,
+        progress_tracker=progress_tracker,
         log=log,
         stop_requested=stop_requested,
         include_services=set(GLOBAL_AWS_SERVICES),
     )
 
 
-def run_regional_checks(session, log=None, stop_requested=None):
+def run_regional_checks(session, progress_tracker=None, log=None, stop_requested=None):
     return run_all_checks(
         session,
+        progress_tracker=progress_tracker,
         log=log,
         stop_requested=stop_requested,
         exclude_services=set(GLOBAL_AWS_SERVICES),
@@ -98,7 +102,8 @@ def run_regional_checks(session, log=None, stop_requested=None):
 
 
 def run_aws_scan(scan_job, account, regions=None):
-    credentials = account.credentials or {}
+    start_time = time.time()
+    credentials = account.get_credentials() or {}
     access_key = credentials.get("access_key")
     secret_key = credentials.get("secret_key")
     default_region = credentials.get("region") or "us-east-1"
@@ -116,7 +121,10 @@ def run_aws_scan(scan_job, account, regions=None):
             unique_regions.append(region)
 
     target_regions = unique_regions
+    total_units = calculate_total_units(len(target_regions))
+    progress_tracker = ProgressTracker(total_units, scan_job)
 
+    print(f"Target regions for scan: {target_regions}")
     if not access_key or not secret_key:
         raise RuntimeError("Missing AWS credentials for this account.")
 
@@ -137,7 +145,9 @@ def run_aws_scan(scan_job, account, regions=None):
 
     if scan_job.cancel_requested:
         interrupted = True
-        scan_job.log("Scan interrupted by user before running global checks.", level="WARNING")
+        scan_job.log(
+            "Scan interrupted by user before running global checks.", level="WARNING"
+        )
     else:
         scan_job.log("Running global AWS checks.", level="INFO")
 
@@ -149,6 +159,7 @@ def run_aws_scan(scan_job, account, regions=None):
         try:
             result = run_global_checks(
                 base_session,
+                progress_tracker=progress_tracker,
                 log=_log_global,
                 stop_requested=lambda: scan_job.cancel_requested,
             )
@@ -206,6 +217,7 @@ def run_aws_scan(scan_job, account, regions=None):
         try:
             result = run_regional_checks(
                 session,
+                progress_tracker=progress_tracker,
                 log=_log_regional,
                 stop_requested=lambda: scan_job.cancel_requested,
             )
@@ -267,6 +279,11 @@ def run_aws_scan(scan_job, account, regions=None):
                 f"Skipped {', '.join(skipped_global_services)} because those services are global and were already scanned.",
                 level="INFO",
             )
+
+    end_time = time.time()
+    scan_job.log(
+        f"Scan completed in {end_time - start_time:.2f} seconds.", level="INFO"
+    )
 
     return {
         "scanned_resources": persisted,

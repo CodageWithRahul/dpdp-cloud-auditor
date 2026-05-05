@@ -4,6 +4,7 @@ import pkgutil
 
 from botocore.exceptions import ClientError
 from django.utils.text import slugify
+from requests import session
 
 from scanner.service_registry.aws.aws_service_registry import get_global_services
 from scanner.checks import aws as aws_checks_package
@@ -139,6 +140,7 @@ def _service_available(module, session):
 
 def run_all_checks(
     session,
+    progress_tracker=None,
     log=None,
     stop_requested=None,
     global_services_ran=None,
@@ -148,12 +150,17 @@ def run_all_checks(
     findings = []
     service_outcomes = {}
     skipped_global_services = set()
+    region_name = getattr(session, "region_name", None) or "GLOBAL"
 
-    # Track global services already scanned
     if global_services_ran is None:
         global_services_ran = set()
 
-    for module in _discover_check_modules():
+    modules = list(_discover_check_modules())
+
+    # -------------------------------
+    # MAIN LOOP
+    # -------------------------------
+    for module in modules:
         service_name = _default_service(module)
 
         if include_services is not None and service_name not in include_services:
@@ -161,16 +168,18 @@ def run_all_checks(
         if exclude_services is not None and service_name in exclude_services:
             continue
 
-        # -------------------------------------------------
-        # SKIP GLOBAL SERVICES IF ALREADY SCANNED
-        # -------------------------------------------------
+        # SKIP GLOBAL ALREADY SCANNED
         if service_name in _GLOBAL_SERVICES and service_name in global_services_ran:
+            if progress_tracker:
+                progress_tracker.increment(service_name, region_name=region_name)
+
             logger.debug(
                 "Skipping global service %s because it was already scanned.",
                 service_name,
             )
             skipped_global_services.add(service_name)
             service_outcomes.setdefault(service_name, "skipped_global")
+
             if log:
                 log(
                     f"Skipping {service_name} checks because this is a global service "
@@ -182,6 +191,7 @@ def run_all_checks(
             logger.info("AWS scan interrupted before running %s checks.", service_name)
             break
 
+        # SERVICE NOT AVAILABLE
         if not _service_available(module, session):
             previous = service_outcomes.get(service_name)
             if previous != "scanned":
@@ -196,8 +206,12 @@ def run_all_checks(
                 "Skipping %s because service cannot be detected",
                 _module_label(module),
             )
+
             if service_name in _GLOBAL_SERVICES:
                 global_services_ran.add(service_name)
+
+            if progress_tracker:
+                progress_tracker.increment(service_name, region_name=region_name)
             continue
 
         if log:
@@ -205,6 +219,8 @@ def run_all_checks(
 
         runner = getattr(module, "run", None)
         if not callable(runner):
+            if progress_tracker:
+                progress_tracker.increment(service_name, region_name=region_name)
             continue
 
         service_outcomes[service_name] = "scanned"
@@ -212,6 +228,8 @@ def run_all_checks(
         logger.info("Running %s checks (%s).", service_name, module.__name__)
 
         raw_findings = runner(session) or []
+        if progress_tracker:
+            progress_tracker.increment(service_name, region_name=region_name)
 
         logger.info("%s returned %d findings", service_name, len(raw_findings))
 
@@ -228,9 +246,7 @@ def run_all_checks(
 
         findings.extend(raw_findings)
 
-        # -------------------------------------------------
         # MARK GLOBAL SERVICE AS SCANNED
-        # -------------------------------------------------
         if service_name in _GLOBAL_SERVICES:
             global_services_ran.add(service_name)
 
@@ -248,6 +264,23 @@ def run_all_checks(
         "skipped_services": skipped_services,
         "skipped_global_services": sorted(skipped_global_services),
     }
+
+
+def calculate_total_units(regions_count):
+    modules = list(_discover_check_modules())
+
+    global_count = 0
+    regional_count = 0
+
+    for module in modules:
+        service = _default_service(module)
+
+        if service in _GLOBAL_SERVICES:
+            global_count += 1
+        else:
+            regional_count += 1
+
+    return global_count + (regional_count * regions_count)
 
 
 def run_checks(

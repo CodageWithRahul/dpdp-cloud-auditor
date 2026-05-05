@@ -6,10 +6,15 @@ const reportDetails = document.getElementById('report-details');
 const scanJobInput = document.getElementById('scan-job-id');
 const loadReportButton = document.getElementById('load-report-button');
 const summaryGrid = document.getElementById('summary-grid');
-const severityChart = document.getElementById('severity-chart');
 const serviceImpactChart = document.getElementById('service-impact-chart');
 const vulnerabilityBody = document.querySelector('#vulnerability-table tbody');
 const actionPlanList = document.getElementById('action-plan');
+const topFixesContainer = document.getElementById('top-priority-fixes');
+const topFixesEmptyState = document.getElementById('top-priority-empty');
+const securityGaugeCanvas = document.getElementById('security-gauge');
+const trendCanvas = document.getElementById('risk-trend-chart');
+const trendInsight = document.getElementById('risk-trend-insight');
+const severityBreakdown = document.getElementById('severity-breakdown');
 const reportMessage = document.getElementById('report-message');
 const reportTitle = document.getElementById('report-title');
 const reportProvider = document.getElementById('report-provider');
@@ -22,7 +27,6 @@ const safetyLabel = document.getElementById('report-safety');
 const reportLogStream = document.getElementById('report-log-stream');
 const reportRiskScore = document.getElementById('report-risk-score');
 const reportRiskText = document.getElementById('report-risk-text');
-const reportStateLabel = document.getElementById('report-state-label');
 const reportFindingsCount = document.getElementById('report-findings-count');
 const pdfButton = document.getElementById('download-report-pdf');
 const excelButton = document.getElementById('download-report-excel');
@@ -102,7 +106,7 @@ const setRegionDisplay = (candidate) => {
     capture(regionParam);
   }
 
-  pool = [...new Set(pool)];
+  pool = [...new Set(pool)].map((entry) => (entry.toString().trim().toLowerCase() === 'all' ? 'ALL' : entry));
 
   reportRegion.innerHTML = '';
 
@@ -143,6 +147,165 @@ const SEVERITY_COLORS = {
   medium: '#facc15',
   low: '#34d399',
   info: '#60a5fa',
+};
+
+// Higher means higher risk contribution.
+// Keep these weights simple + explainable for non-technical users.
+const SEVERITY_WEIGHTS = {
+  critical: 10,
+  high: 6,
+  medium: 3,
+  low: 1,
+  info: 0,
+};
+
+const normalizeSeverity = (value) => {
+  const raw = (value || 'info').toString().toLowerCase();
+  return SEVERITY_ORDER.find((level) => raw.includes(level)) || 'info';
+};
+
+const severityRank = (severity) => {
+  const idx = SEVERITY_ORDER.indexOf(severity);
+  return idx === -1 ? SEVERITY_ORDER.length : idx;
+};
+
+const pickHighestSeverity = (severities = []) => {
+  const normalized = severities.map(normalizeSeverity);
+  return normalized.sort((a, b) => severityRank(a) - severityRank(b))[0] || 'info';
+};
+
+const normalizeIssueKey = (value) => {
+  const raw = (value || '').toString().trim();
+  if (!raw) return 'unknown_issue';
+  return raw.toLowerCase().replace(/\s+/g, '_');
+};
+
+const extractFixSteps = (text, { max = 3 } = {}) => {
+  const raw = (text || '').toString().trim();
+  if (!raw) return [];
+
+  // Split on line breaks / bullets first.
+  const lines = raw
+    .split(/\r?\n|•|\u2022|-/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const candidates = lines.length ? lines : raw.split(/[.;](\s|$)/g).map((s) => s.trim()).filter(Boolean);
+
+  // Normalize: remove numbering prefixes like "1)", "2.", etc.
+  const cleaned = candidates
+    .map((step) => step.replace(/^\s*(\d+[\).\s]+)+/, '').trim())
+    .filter((step) => step.length >= 6);
+
+  return cleaned.slice(0, max);
+};
+
+const inferDifficulty = (recommendationText = '') => {
+  const text = (recommendationText || '').toString().toLowerCase();
+  if (!text) return null;
+  if (/(re-?deploy|migrate|rotate keys|rebuild|refactor)/i.test(text)) return 'Hard';
+  if (/(iam|policy|security group|nacl|waf|encryption|kms|rbac)/i.test(text)) return 'Medium';
+  return 'Easy';
+};
+
+// "Why this matters" is frequently missing from scan outputs.
+// This maps common cloud issues to plain-language impact statements.
+const inferWhyThisMatters = ({ issueType = '', title = '', service = '' } = {}) => {
+  const key = `${issueType} ${title} ${service}`.toLowerCase();
+  if (/(ssh|port\s*22)/i.test(key)) return 'This can allow attackers to attempt unauthorized access to your server over SSH.';
+  if (/(rdp|port\s*3389)/i.test(key)) return 'This can expose remote desktop access to the internet, increasing the risk of account takeover.';
+  if (/(public|world|0\.0\.0\.0\/0|open)/i.test(key) && /(security group|nacl|inbound)/i.test(key))
+    return 'This creates an internet-exposed entry point that attackers can scan and exploit.';
+  if (/(s3|bucket)/i.test(key) && /(public|anonymous)/i.test(key))
+    return 'Public storage can leak sensitive data and lead to compliance and breach risk.';
+  if (/(encryption|kms)/i.test(key) && /(disabled|not enabled|unencrypted)/i.test(key))
+    return 'Unencrypted data is easier to steal and may violate security and compliance requirements.';
+  if (/(logging|cloudtrail|audit)/i.test(key) && /(disabled|not enabled)/i.test(key))
+    return 'Without audit logs, suspicious activity is harder to detect and investigate.';
+  if (/(mfa|multi[- ]factor)/i.test(key) && /(disabled|not enabled|missing)/i.test(key))
+    return 'Accounts without MFA are much easier to compromise through password attacks.';
+  return 'This weakens your security posture and increases the chance of unauthorized access or data exposure.';
+};
+
+const groupFindings = (items = []) => {
+  const groups = new Map();
+
+  items.forEach((item) => {
+    const issueType = item.issue_type || item.issueType || item.title || item.description || 'Unknown issue';
+    const groupKey = normalizeIssueKey(issueType);
+    const severity = normalizeSeverity(item.severity || item.priority);
+    const resourceId = formatValue(item.resource_id || item.resource || item.resource_name || item.resource_arn || item.arn || '-');
+    const region = formatValue(item.region || item.location || item.aws_region || item.cloud_region || 'N/A');
+    const service = formatValue(item.service || item.service_name || item.scanner || 'Service');
+    const recommendationText = item.recommendation || item.remediation || item.details || item.advice || '';
+
+    if (!groups.has(groupKey)) {
+      const title = formatValue(item.title || item.issue_type || item.check_title || item.description || issueType);
+      const why = inferWhyThisMatters({ issueType, title, service });
+      groups.set(groupKey, {
+        key: groupKey,
+        issue_type: issueType,
+        title,
+        severity,
+        service,
+        regions: new Set(),
+        resources: [],
+        recommendationText: recommendationText || '',
+        why,
+      });
+    }
+
+    const group = groups.get(groupKey);
+    group.severity = pickHighestSeverity([group.severity, severity]);
+    if (service && service !== '-') group.service = group.service === 'Service' ? service : group.service;
+    group.regions.add(region);
+    group.resources.push({
+      resource: resourceId,
+      region,
+      raw: item,
+    });
+    if (!group.recommendationText && recommendationText) group.recommendationText = recommendationText;
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const steps = extractFixSteps(group.recommendationText, { max: 3 });
+    const fallback = steps.length
+      ? steps
+      : [
+          'Identify the affected resource(s) and confirm exposure.',
+          'Apply the recommended configuration change in the cloud console/IaC.',
+          'Re-run the scan to validate the fix.',
+        ];
+    const difficulty = inferDifficulty(group.recommendationText);
+
+    return {
+      ...group,
+      regions: Array.from(group.regions),
+      affected_count: group.resources.length,
+      fix_steps: fallback,
+      difficulty,
+      risk_points: SEVERITY_WEIGHTS[group.severity] * Math.min(10, Math.max(1, group.resources.length / 2)),
+    };
+  });
+};
+
+// 0 findings -> 100. More + higher-severity findings -> lower score.
+// The scoring is intentionally simple & transparent, not a CVSS replacement.
+const computeRiskScore = (findings = []) => {
+  if (!Array.isArray(findings) || findings.length === 0) return 100;
+
+  const counts = buildSeverityCounts(findings);
+  const total =
+    counts.critical * SEVERITY_WEIGHTS.critical +
+    counts.high * SEVERITY_WEIGHTS.high +
+    counts.medium * SEVERITY_WEIGHTS.medium +
+    counts.low * SEVERITY_WEIGHTS.low;
+
+  // Normalize against a "worst case" where every finding is critical.
+  const max = findings.length * SEVERITY_WEIGHTS.critical;
+  const ratio = max > 0 ? total / max : 0;
+  const score = Math.round(100 - ratio * 100);
+  return Math.max(0, Math.min(100, score));
 };
 
 const showReportDetails = () => {
@@ -328,13 +491,6 @@ const startLogPolling = (jobId) => {
   ensureReportLogs(jobId);
 };
 
-const computeRiskScore = (findings = []) => {
-  const counts = buildSeverityCounts(findings);
-  const weight = counts.critical * 18 + counts.high * 10 + counts.medium * 5 + counts.low * 2;
-  const score = Math.max(10, Math.min(100, 100 - weight));
-  return score;
-};
-
 const getRiskText = (score) => {
   if (score >= 85) return 'Excellent';
   if (score >= 65) return 'Good';
@@ -342,12 +498,28 @@ const getRiskText = (score) => {
   return 'Needs attention';
 };
 
-const renderReportOverview = (findings = []) => {
+const getRiskTone = (score) => {
+  if (score >= 85) return 'excellent';
+  if (score >= 65) return 'good';
+  if (score >= 40) return 'moderate';
+  return 'risky';
+};
+
+const renderReportOverview = ({ findings = [], groups = [] } = {}) => {
+  // Score uses raw findings (more granular than grouped issues).
   const score = computeRiskScore(findings);
   if (reportRiskScore) reportRiskScore.textContent = `${score}%`;
-  if (reportRiskText) reportRiskText.textContent = getRiskText(score);
-  if (reportStateLabel) reportStateLabel.textContent = findings.length ? 'Findings available' : 'No findings detected';
-  if (reportFindingsCount) reportFindingsCount.textContent = String(findings.length);
+  if (reportRiskText) {
+    const label = getRiskText(score);
+    reportRiskText.textContent = `Security level: ${label}`;
+    reportRiskText.classList.remove('loading', 'excellent', 'good', 'moderate', 'risky');
+    reportRiskText.classList.add(getRiskTone(score));
+  }
+
+  // Counts shown to users should represent unique issues (grouped by type).
+  if (reportFindingsCount) reportFindingsCount.textContent = String(groups.length);
+
+  renderSecurityGauge(score);
 };
 
 const buildCloudResultsUrl = (accountId, scanJobId) => {
@@ -430,33 +602,6 @@ const buildSeverityCounts = (items = []) => {
   return counts;
 };
 
-const renderSeverityChart = (items = []) => {
-  if (!severityChart) return;
-  severityChart.innerHTML = '';
-  const counts = buildSeverityCounts(items);
-  const total = Object.values(counts).reduce((sum, value) => sum + value, 0) || 1;
-  SEVERITY_ORDER.forEach((severity) => {
-    const bar = document.createElement('div');
-    bar.className = 'severity-bar';
-    const label = document.createElement('span');
-    label.className = 'severity-bar-label';
-    label.textContent = severity;
-    const track = document.createElement('div');
-    track.className = 'severity-bar-track';
-    const fill = document.createElement('div');
-    fill.className = 'severity-bar-fill';
-    fill.style.width = `${Math.round((counts[severity] / total) * 100)}%`;
-    fill.style.background = SEVERITY_COLORS[severity];
-    track.appendChild(fill);
-    const value = document.createElement('span');
-    value.textContent = counts[severity];
-    bar.appendChild(label);
-    bar.appendChild(track);
-    bar.appendChild(value);
-    severityChart.appendChild(bar);
-  });
-};
-
 const renderSeverityPie = (items = []) => {
   if (!severityPieCanvas) return;
   const ctx = severityPieCanvas.getContext('2d');
@@ -469,6 +614,7 @@ const renderSeverityPie = (items = []) => {
   const centerX = width / 2;
   const centerY = height / 2;
   const radius = Math.min(width, height) * 0.4;
+  const innerRadius = radius * 0.62; // donut
   let startAngle = -0.5 * Math.PI;
   const segments = [];
   if (total > 0) {
@@ -482,6 +628,14 @@ const renderSeverityPie = (items = []) => {
       ctx.arc(centerX, centerY, radius, startAngle, startAngle + slice);
       ctx.closePath();
       ctx.fill();
+
+      // donut hole (draw after each slice to keep edges crisp)
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
       segments.push({ severity, value });
       startAngle += slice;
     });
@@ -490,6 +644,11 @@ const renderSeverityPie = (items = []) => {
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
   }
   if (severityPieLegend) {
     if (segments.length) {
@@ -505,6 +664,151 @@ const renderSeverityPie = (items = []) => {
   }
 };
 
+const setupHiDPICanvas = (canvas, cssWidth, cssHeight) => {
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const dpr = window.devicePixelRatio || 1;
+  const width = cssWidth || canvas.clientWidth || canvas.width;
+  const height = cssHeight || canvas.clientHeight || canvas.height;
+
+  canvas.width = Math.max(1, Math.floor(width * dpr));
+  canvas.height = Math.max(1, Math.floor(height * dpr));
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, width, height };
+};
+
+const renderSecurityGauge = (score) => {
+  if (!securityGaugeCanvas) return;
+  const setup = setupHiDPICanvas(securityGaugeCanvas, 320, 180);
+  if (!setup) return;
+  const { ctx, width, height } = setup;
+
+  ctx.clearRect(0, 0, width, height);
+
+  // Use padding so the stroke never clips at canvas edges.
+  const centerX = width / 2;
+  const centerY = height * 0.88;
+  const radius = Math.min(width, height) * 0.68;
+  // Draw a TOP semicircle from left (π) to right (2π).
+  // This keeps y-coordinates above the center (sin is negative on π..2π).
+  const start = Math.PI;
+  const end = 2 * Math.PI;
+
+  const clamp = (n) => Math.max(0, Math.min(100, Number.isFinite(n) ? n : 0));
+  const value = clamp(score);
+  const angle = start + (value / 100) * (end - start);
+
+  // Track
+  ctx.lineWidth = 16;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, start, end);
+  ctx.stroke();
+
+  // Color zones (red <50, yellow 50-79, green 80-100)
+  const zones = [
+    { from: 0, to: 50, color: 'rgba(248,113,113,0.9)' },
+    { from: 50, to: 80, color: 'rgba(250,204,21,0.9)' },
+    { from: 80, to: 100, color: 'rgba(52,211,153,0.9)' },
+  ];
+
+  zones.forEach((zone) => {
+    const a0 = start + (zone.from / 100) * (end - start);
+    const a1 = start + (zone.to / 100) * (end - start);
+    ctx.strokeStyle = zone.color;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, a0, a1);
+    ctx.stroke();
+  });
+
+  // Needle (draw with trig to avoid rotation alignment bugs)
+  const needleLen = radius - 22;
+  const needleX = centerX + needleLen * Math.cos(angle);
+  const needleY = centerY + needleLen * Math.sin(angle);
+  ctx.strokeStyle = 'rgba(226,232,240,0.95)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.lineTo(needleX, needleY);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(226,232,240,0.95)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = 'rgba(226,232,240,0.95)';
+  ctx.font = '600 18px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${value}%`, centerX, height * 0.52);
+
+  ctx.fillStyle = 'rgba(226,232,240,0.7)';
+  ctx.font = '500 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.fillText('Security score', centerX, height * 0.64);
+};
+
+const renderMiniGauge = (canvas, ratio, { label = '', centerText = '' } = {}) => {
+  if (!canvas) return;
+  const cssW = Number(canvas.getAttribute('width')) || 220;
+  const cssH = Number(canvas.getAttribute('height')) || 160;
+  const setup = setupHiDPICanvas(canvas, cssW, cssH);
+  if (!setup) return;
+  const { ctx, width, height } = setup;
+  ctx.clearRect(0, 0, width, height);
+
+  const clamp01 = (n) => Math.max(0, Math.min(1, Number.isFinite(n) ? n : 0));
+  const value = clamp01(ratio);
+
+  const centerX = width / 2;
+  const centerY = height * 0.88;
+  const radius = Math.min(width, height) * 0.64;
+  const start = Math.PI;
+  const end = 2 * Math.PI;
+  const angle = start + value * (end - start);
+
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, start, end);
+  ctx.stroke();
+
+  // Fill arc
+  const zoneColor = value >= 0.8 ? 'rgba(52,211,153,0.9)' : value >= 0.5 ? 'rgba(250,204,21,0.9)' : 'rgba(248,113,113,0.9)';
+  ctx.strokeStyle = zoneColor;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, start, angle);
+  ctx.stroke();
+
+  // Needle
+  const needleLen = radius - 18;
+  ctx.strokeStyle = 'rgba(226,232,240,0.95)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.lineTo(centerX + needleLen * Math.cos(angle), centerY + needleLen * Math.sin(angle));
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(226,232,240,0.95)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Text
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(226,232,240,0.95)';
+  ctx.font = '700 16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.fillText(centerText || '', centerX, height * 0.55);
+  if (label) {
+    ctx.fillStyle = 'rgba(226,232,240,0.7)';
+    ctx.font = '600 11px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText(label, centerX, height * 0.68);
+  }
+};
 
 const renderServiceChart = (services = []) => {
   if (!serviceImpactChart) return;
@@ -513,13 +817,36 @@ const renderServiceChart = (services = []) => {
     serviceImpactChart.innerHTML = '<p class="muted">Service impact will appear here.</p>';
     return;
   }
+
+  const extractServiceCount = (service) => {
+    const direct =
+      service?.issue_count ??
+      service?.issues ??
+      service?.findings ??
+      service?.count ??
+      service?.total ??
+      service?.total_findings ??
+      service?.findings_count;
+
+    const directNum = Number(direct);
+    if (Number.isFinite(directNum)) return directNum;
+
+    // Some APIs return severity buckets per service.
+    const buckets = ['critical', 'high', 'medium', 'low', 'info'];
+    const sum = buckets.reduce((acc, key) => {
+      const n = Number(service?.[`${key}_issues`] ?? service?.[`${key}_findings`] ?? service?.[key]);
+      return acc + (Number.isFinite(n) ? n : 0);
+    }, 0);
+    return sum;
+  };
+
   const values = services.map((service) => {
-    const count = Number(service.issue_count ?? service.issues ?? service.findings ?? 0);
+    const count = extractServiceCount(service);
     return {
       label: service.service || service.service_name || 'Service',
       value: Math.max(count, 0),
     };
-  });
+  }).sort((a, b) => b.value - a.value);
   const maxValue = Math.max(...values.map((item) => item.value), 1);
   values.forEach((item) => {
     const row = document.createElement('div');
@@ -542,47 +869,348 @@ const renderServiceChart = (services = []) => {
   });
 };
 
-const renderResults = (items = []) => {
+const renderKeyMetrics = ({ findings = [], summary = null } = {}) => {
+  if (!summaryGrid) return;
+
+  // Always compute from findings, then selectively override with summary values if present.
+  const computed = aggregateSummaryFromFindings(findings);
+  const counts = buildSeverityCounts(findings);
+
+  const get = (key, fallback) => {
+    const fromSummary = summary && typeof summary === 'object' ? summary[key] : undefined;
+    const value = fromSummary ?? fallback;
+    const asNumber = Number(value);
+    return Number.isFinite(asNumber) ? asNumber : fallback;
+  };
+
+  const metrics = [
+    { label: 'Critical', value: get('critical_issues', counts.critical) },
+    { label: 'High', value: get('high_issues', counts.high) },
+    { label: 'Medium', value: get('medium_issues', counts.medium) },
+    { label: 'Low', value: get('low_issues', counts.low) },
+  ];
+
+  summaryGrid.innerHTML = '';
+  metrics.forEach((metric) => {
+    const card = document.createElement('div');
+    card.className = 'summary-card metric-card';
+    card.innerHTML = `
+      <h4>${metric.label}</h4>
+      <strong>${formatValue(metric.value)}</strong>
+    `;
+    summaryGrid.appendChild(card);
+  });
+};
+
+const renderSeverityBreakdown = (findings = []) => {
+  if (!severityBreakdown) return;
+  severityBreakdown.innerHTML = '';
+
+  const counts = buildSeverityCounts(findings);
+  const rows = [
+    { key: 'critical', label: 'Critical' },
+    { key: 'high', label: 'High' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'low', label: 'Low' },
+    { key: 'info', label: 'Info' },
+  ];
+
+  const total = rows.reduce((sum, row) => sum + (counts[row.key] || 0), 0);
+  const max = Math.max(...rows.map((r) => counts[r.key] || 0), 1);
+  const pct = (value) => {
+    if (!total) return 0;
+    return Math.round((value / total) * 100);
+  };
+
+  rows.forEach((row) => {
+    const value = counts[row.key] || 0;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'severity-break-row';
+    wrapper.innerHTML = `
+      <div class="severity-break-meta">
+        <span class="severity-pill ${row.key}">${row.label}</span>
+      </div>
+      <div class="severity-break-bar">
+        <div class="severity-break-fill ${row.key}" style="width:${Math.round((value / max) * 100)}%"></div>
+      </div>
+      <div class="severity-break-value">${pct(value)}% · ${value}</div>
+    `;
+    severityBreakdown.appendChild(wrapper);
+  });
+};
+
+const renderTrendChart = (findings = []) => {
+  if (!trendCanvas) return;
+  const cssW = Number(trendCanvas.getAttribute('width')) || 1100;
+  const cssH = Number(trendCanvas.getAttribute('height')) || 320;
+  const setup = setupHiDPICanvas(trendCanvas, cssW, cssH);
+  if (!setup) return;
+  const { ctx, width, height } = setup;
+  ctx.clearRect(0, 0, width, height);
+
+  // Horizontal bar chart: "Top problems" ordered by severity then affected count.
+  const groups = groupFindings(findings)
+    .slice()
+    .sort((a, b) => {
+      const rank = severityRank(a.severity) - severityRank(b.severity);
+      if (rank !== 0) return rank;
+      return (b.affected_count || 0) - (a.affected_count || 0);
+    })
+    .slice(0, 10);
+
+  if (!groups.length) {
+    ctx.fillStyle = 'rgba(226,232,240,0.7)';
+    ctx.font = '600 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    ctx.fillText('No findings to highlight yet.', 18, 32);
+    if (trendInsight) trendInsight.textContent = '';
+    return;
+  }
+
+  const padding = 22;
+  const leftLabel = Math.min(520, Math.max(260, Math.floor(width * 0.42)));
+  const chartW = width - leftLabel - padding - 18;
+  const rowH = Math.max(34, Math.floor((height - padding * 2) / groups.length));
+  const max = Math.max(...groups.map((g) => Number(g.affected_count || 0)), 1);
+
+  ctx.font = '600 12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textBaseline = 'middle';
+
+  groups.forEach((group, idx) => {
+    const y = padding + idx * rowH + rowH / 2;
+    const label = (group.title || group.issue_type || 'Issue').toString();
+    const value = Math.max(0, Number(group.affected_count || 0));
+    const barW = Math.round((value / max) * chartW);
+
+    // Label
+    const clipped = label.length > 64 ? `${label.slice(0, 64)}…` : label;
+    ctx.fillStyle = 'rgba(226,232,240,0.86)';
+    ctx.fillText(clipped, 18, y);
+
+    // Track
+    const trackX = leftLabel;
+    const trackY = y - 8;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(trackX, trackY, chartW, 16);
+
+    // Fill (severity-colored)
+    ctx.fillStyle = SEVERITY_COLORS[group.severity] || 'rgba(59,130,246,0.9)';
+    ctx.fillRect(trackX, trackY, barW, 16);
+
+    // Value
+    ctx.fillStyle = 'rgba(226,232,240,0.80)';
+    ctx.textAlign = 'right';
+    ctx.fillText(String(value), width - 18, y);
+    ctx.textAlign = 'left';
+  });
+
+  if (trendInsight) {
+    const top = groups[0];
+    trendInsight.textContent = top
+      ? `Top issue: ${top.title} (${top.affected_count} affected).`
+      : '';
+  }
+};
+
+const renderOverview = ({ summary = null, findings = [], groups = [] } = {}) => {
+  // Top-level overview cards
+  renderReportOverview({ findings, groups });
+
+  // "Key metrics" grid
+  renderKeyMetrics({ findings, summary });
+  renderSeverityBreakdown(findings);
+
+  // Total findings mini gauge (same row)
+  const totalCanvas = document.getElementById('total-findings-gauge');
+  const total = groups.length;
+  const denom = Math.max(5, total * 1.4); // self-scaled (no history available)
+  const ratio = denom > 0 ? 1 - Math.min(1, total / denom) : 1;
+  renderMiniGauge(totalCanvas, ratio, { label: 'Findings', centerText: String(total) });
+};
+
+const renderCharts = ({ findings = [], services = [] } = {}) => {
+  renderSeverityPie(findings);
+  const fallback = aggregateServicesFromFindings(findings);
+  const safeServices = Array.isArray(services) && services.length ? services : fallback;
+  renderServiceChart(safeServices);
+};
+
+const renderTopRisks = (groups = []) => {
+  renderTopPriorityFixes(groups);
+};
+
+const renderAll = ({ summary = null, findings = [], services = [] } = {}) => {
+  const grouped = groupFindings(findings).sort((a, b) => {
+    const rank = severityRank(a.severity) - severityRank(b.severity);
+    if (rank !== 0) return rank;
+    return (b.affected_count || 0) - (a.affected_count || 0);
+  });
+
+  // Overview + charts + prioritized sections
+  renderOverview({ summary, findings, groups: grouped });
+  renderTrendChart(findings);
+  renderCharts({ findings, services });
+  renderTopRisks(grouped);
+  renderActionPlan(grouped);
+  renderFindingsTable(grouped, { rawFindings: findings });
+};
+
+const clearVisuals = () => {
+  renderKeyMetrics({ findings: [], summary: null });
+  renderSeverityPie([]);
+  renderServiceChart([]);
+  renderTopPriorityFixes([]);
+  renderActionPlan([]);
+  renderFindingsTable([]);
+  renderSecurityGauge(100);
+  renderSeverityBreakdown([]);
+  renderTrendChart([]);
+};
+
+const renderFindingsTable = (groups = [], { rawFindings = [] } = {}) => {
   if (!vulnerabilityBody) return;
   vulnerabilityBody.innerHTML = '';
-  if (!items.length) {
-    vulnerabilityBody.innerHTML = '<tr><td colspan="6" class="empty-row">No vulnerabilities to display.</td></tr>';
+
+  if (!rawFindings.length) {
+    vulnerabilityBody.innerHTML = '<tr><td colspan="2" class="empty-row">✅ Your cloud environment is secure. No major risks detected.</td></tr>';
     updateSafetyLabel(true);
     return;
   }
+
   updateSafetyLabel(false);
-  items.forEach((item) => {
+
+  groups.forEach((group) => {
     const row = document.createElement('tr');
     row.className = 'vulnerability-row';
-    const severity = (item.severity || item.priority || 'info').toString().toLowerCase();
-    const severityLabel = SEVERITY_ORDER.find((level) => severity.includes(level)) || 'info';
     row.innerHTML = `
-      <td>${formatValue(item.resource_id || item.resource || item.resource_name)}</td>
-      <td>${formatValue(item.issue_type || item.title || item.description)}</td>
-      <td><span class="severity-pill ${severityLabel}">${severityLabel}</span></td>
-      <td>${formatValue(item.region || item.location || item.aws_region || 'N/A')}</td>
-      <td>${formatValue(item.recommendation || item.remediation || item.details)}</td>
-      <td>${formatValue(item.service || item.service_name || item.scanner || 'Service')}</td>
+      <td class="issue-cell">
+        <div class="issue-title">
+          <strong>${formatValue(group.title)}</strong>
+          <span class="severity-pill ${group.severity}">${group.severity}</span>
+        </div>
+        <p class="issue-why">${formatValue(group.why)}</p>
+        <div class="issue-meta">
+          <span class="meta-pill">${group.affected_count} affected</span>
+          <span class="meta-pill">${formatValue(group.service)}</span>
+          <span class="meta-pill">${group.regions.length ? group.regions.map(formatRegionValue).join(', ') : 'N/A'}</span>
+          ${group.difficulty ? `<span class="meta-pill difficulty">${group.difficulty}</span>` : ''}
+        </div>
+      </td>
+      <td class="fix-cell">
+        <div class="fix-guide">
+          <p class="fix-guide-title">Fix guide</p>
+          <ul class="fix-steps">
+            ${group.fix_steps.map((step) => `<li>${formatValue(step)}</li>`).join('')}
+          </ul>
+          <details class="resource-details">
+            <summary>View affected resources (${group.affected_count})</summary>
+            <ul class="resource-list">
+              ${group.resources
+                .slice(0, 30)
+                .map((resource) => `<li><span class="resource-id">${formatValue(resource.resource)}</span><span class="resource-region">${formatRegionValue(resource.region)}</span></li>`)
+                .join('')}
+              ${group.resources.length > 30 ? `<li class="muted">+${group.resources.length - 30} more…</li>` : ''}
+            </ul>
+          </details>
+        </div>
+      </td>
     `;
     vulnerabilityBody.appendChild(row);
   });
 };
 
-const renderServices = (items = []) => {
+const renderResults = (items = []) => {
+  // Backwards-compatible entry point for any older call sites.
+  const summary = aggregateSummaryFromFindings(items);
+  const services = aggregateServicesFromFindings(items);
+  renderAll({ findings: items, services, summary });
+};
+
+const buildActionPlan = (groups = []) => {
+  const top = (groups || [])
+    .slice()
+    .sort((a, b) => {
+      const rank = severityRank(a.severity) - severityRank(b.severity);
+      if (rank !== 0) return rank;
+      return (b.affected_count || 0) - (a.affected_count || 0);
+    })
+    .slice(0, 6);
+
+  return top.map((group, index) => ({
+    step: index + 1,
+    title: `Fix: ${group.title}`,
+    severity: group.severity,
+    why: group.why,
+    first_fix: group.fix_steps?.[0] || null,
+  }));
+};
+
+const renderActionPlan = (groups = []) => {
   if (!actionPlanList) return;
   actionPlanList.innerHTML = '';
-  if (!items.length) {
+  if (!groups.length) {
     actionPlanList.innerHTML = '<li class="empty-row">Action steps will appear once the report loads.</li>';
     return;
   }
-  const prioritized = items.slice(0, 4);
-  prioritized.forEach((service, index) => {
+
+  const plan = buildActionPlan(groups);
+  plan.forEach((entry) => {
     const item = document.createElement('li');
     item.innerHTML = `
-      <strong>Step ${index + 1}: ${formatValue(service.service || service.service_name || 'Service')}</strong>
-      <p class="muted">${formatValue(service.advice || service.recommendation || service.action)}</p>
+      <div class="action-plan-head">
+        <strong>Step ${entry.step}: ${formatValue(entry.title)} <span class="severity-pill ${entry.severity}">${entry.severity}</span></strong>
+      </div>
+      <p class="muted">${formatValue(entry.why)}</p>
+      ${entry.first_fix ? `<p class="action-plan-fix"><span class="muted">Start with:</span> ${formatValue(entry.first_fix)}</p>` : ''}
     `;
     actionPlanList.appendChild(item);
+  });
+};
+
+const renderTopPriorityFixes = (groups = []) => {
+  if (!topFixesContainer) return;
+
+  const top = (groups || [])
+    .filter((group) => ['critical', 'high'].includes(group.severity))
+    .slice()
+    .sort((a, b) => {
+      const rank = severityRank(a.severity) - severityRank(b.severity);
+      if (rank !== 0) return rank;
+      return (b.affected_count || 0) - (a.affected_count || 0);
+    })
+    .slice(0, 5);
+
+  topFixesContainer.innerHTML = '';
+  if (topFixesEmptyState) {
+    topFixesEmptyState.hidden = top.length > 0;
+    if (!top.length) {
+      topFixesEmptyState.textContent = groups.length
+        ? '✅ No HIGH/CRITICAL issues detected. Keep up the good work.'
+        : 'Load a scan job to see prioritized fixes.';
+    }
+  }
+
+  if (!top.length) return;
+
+  top.forEach((group) => {
+    const card = document.createElement('article');
+    card.className = 'fix-card';
+    card.innerHTML = `
+      <header class="fix-card-head">
+        <div class="fix-card-title">
+          <strong>${formatValue(group.title)}</strong>
+          <span class="severity-pill ${group.severity}">${group.severity}</span>
+        </div>
+        <div class="fix-card-meta">
+          <span class="meta-pill">${group.affected_count} affected</span>
+          ${group.difficulty ? `<span class="meta-pill difficulty">${group.difficulty}</span>` : ''}
+        </div>
+      </header>
+      <p class="fix-card-why">${formatValue(group.why)}</p>
+      <ul class="fix-steps">
+        ${group.fix_steps.slice(0, 3).map((step) => `<li>${formatValue(step)}</li>`).join('')}
+      </ul>
+    `;
+    topFixesContainer.appendChild(card);
   });
 };
 
@@ -596,12 +1224,7 @@ const updateSafetyLabel = (safe) => {
 
 const clearReport = () => {
   stopLogPolling();
-  renderSummary(null);
-  renderSeverityChart([]);
-  renderSeverityPie([]);
-  renderServiceChart([]);
-  renderResults([]);
-  renderServices([]);
+  clearVisuals();
   clearReportLogs();
   resetMetadata();
   hideReportDetails();
@@ -769,17 +1392,11 @@ const loadReport = async (jobId) => {
     if (summaryResult.status !== 'fulfilled') {
       throw summaryResult.reason;
     }
-    const services = servicesResult.status === 'fulfilled' ? servicesResult.value : [];
-    const findings = findingsResult.status === 'fulfilled' ? findingsResult.value : [];
+    const services = servicesResult.status === 'fulfilled' && Array.isArray(servicesResult.value) ? servicesResult.value : [];
+    const findings = findingsResult.status === 'fulfilled' && Array.isArray(findingsResult.value) ? findingsResult.value : [];
     const summaryLogs = normalizeScanLogPayload(summaryResult.value);
-    renderSummary(summaryResult.value);
     setMetadataFromSummary(summaryResult.value);
-    renderSeverityChart(findings);
-    renderSeverityPie(findings);
-    renderServiceChart(services);
-    renderResults(findings);
-    renderServices(services);
-    renderReportOverview(findings);
+    renderAll({ summary: summaryResult.value, findings, services });
     renderReportLogs(summaryLogs);
     startLogPolling(jobId);
     setMessage(`Loaded report for scan job #${jobId}.`, 'success');
@@ -812,14 +1429,8 @@ const loadAccountReport = async (accountId, { scanJobId, accountName, providerNa
       throw new Error('Expected report results to be a list.');
     }
     const summary = aggregateSummaryFromFindings(entries);
-    renderSummary(summary);
     const serviceData = aggregateServicesFromFindings(entries);
-    renderSeverityChart(entries);
-    renderSeverityPie(entries);
-    renderServiceChart(serviceData);
-    renderResults(entries);
-    renderServices(serviceData);
-    renderReportOverview(entries);
+    renderAll({ summary, findings: entries, services: serviceData });
     setMetadataFromEntries(entries, { jobId: scanJobId });
     if (scanJobId) {
       startLogPolling(scanJobId);

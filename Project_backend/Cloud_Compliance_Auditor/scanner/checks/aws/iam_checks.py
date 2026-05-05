@@ -5,9 +5,9 @@ from scanner.utils.issue_builder import build_issue
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------
 # MFA CHECK (USER MFA)
-# ---------------------------
+
+
 def check_iam_mfa(client, users):
     findings = []
 
@@ -42,9 +42,9 @@ def check_iam_mfa(client, users):
     return findings
 
 
-# ---------------------------
 # ROOT MFA CHECK
-# ---------------------------
+
+
 def check_root_mfa(client):
     findings = []
 
@@ -76,9 +76,9 @@ def check_root_mfa(client):
     return findings
 
 
-# ---------------------------
 # CONSOLE USERS WITHOUT MFA
-# ---------------------------
+
+
 def check_console_access_without_mfa(client, users):
     findings = []
 
@@ -132,9 +132,9 @@ def check_console_access_without_mfa(client, users):
     return findings
 
 
-# ---------------------------
 # ACTIVE ACCESS KEYS CHECK
-# ---------------------------
+
+
 def check_active_access_keys(client, users):
     findings = []
 
@@ -170,9 +170,9 @@ def check_active_access_keys(client, users):
     return findings
 
 
-# ---------------------------
 # UNUSED USERS CHECK
-# ---------------------------
+
+
 def check_unused_users(users):
     findings = []
 
@@ -192,9 +192,9 @@ def check_unused_users(users):
     return findings
 
 
-# ---------------------------
 # ROOT ACCESS KEYS CHECK
-# ---------------------------
+
+
 def check_root_access_keys(session):
     client = session.client("iam")
 
@@ -218,9 +218,9 @@ def check_root_access_keys(session):
     return []
 
 
-# ---------------------------
 # MAIN RUNNER
-# ---------------------------
+
+
 def run(session):
     client = session.client("iam")
     findings = []

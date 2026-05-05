@@ -1,11 +1,12 @@
 import { BASE_URL, fetchWithAuth, requireAuth } from './api.js';
 import { showLoader, hideLoader } from '../components/loader/loader.js';
-console.log("ADD ACCOUNT JS LOADED");
 let accountForm;
 let formMessage;
 let providerSelect;
 let nameInput;
 let accessInput;
+let awsAccountIdInput;
+let gcpProjectIdInput;
 let secretInput;
 let tenantInput;
 let clientInput;
@@ -46,7 +47,7 @@ const populateFormForEdit = (account) => {
   editingAccountId = account.id;
   originalProvider = account.provider;
   providerSelect.value = account.provider;
-  nameInput.value = account.account_name || '';
+  nameInput.value = account.account_name || account.account_id || '';
   showCredentialSection(account.provider);
   setMessage('Loaded existing account. Leave credential fields blank to keep current credentials.', 'success');
 };
@@ -101,6 +102,15 @@ const handleFormSubmit = async (event) => {
     setMessage('Account name is required.');
     return;
   }
+ let accountId = "";
+
+if (provider === "AWS") {
+  accountId = awsAccountIdInput?.value.trim();
+} else if (provider === "GCP") {
+  accountId = gcpProjectIdInput?.value.trim();
+} else if (provider === "AZURE") {
+  accountId = subscriptionInput?.value.trim(); // Azure equivalent
+}
 
   let credentials = null;
   let hasCredentialInput = false;
@@ -173,7 +183,7 @@ const handleFormSubmit = async (event) => {
     return;
   }
 
-  const payload = { provider, account_name: accountName };
+  const payload = { provider, account_name: accountName, account_id: accountId };
   if (credentials) payload.credentials = credentials;
 
   try {
@@ -229,7 +239,7 @@ const handleFormSubmit = async (event) => {
       userMessage = 'Request timeout. Please check your credentials and try again.';
     } else if (!userMessage.includes('required') && !userMessage.includes('must be')) {
       // For backend validation errors, prefix with context
-      userMessage = `Credential verification failedd: ${userMessage}`;
+      userMessage = `Credential verification failed: ${userMessage}`;
     }
     
     setMessage(userMessage);
@@ -243,6 +253,8 @@ const initDomRefs = () => {
   formMessage = document.getElementById('form-message');
   providerSelect = document.getElementById('provider-select');
   nameInput = document.getElementById('account-name');
+  awsAccountIdInput = document.getElementById('aws-account-id');
+  gcpProjectIdInput = document.getElementById('gcp-project-id');
   accessInput = document.getElementById('access-key');
   secretInput = document.getElementById('secret-key');
   tenantInput = document.getElementById('tenant-id');
@@ -269,7 +281,11 @@ const init = async () => {
   }
 
   showCredentialSection(providerSelect?.value || 'AWS');
-  providerSelect?.addEventListener('change', (event) => showCredentialSection(event.target.value));
+providerSelect?.addEventListener('change', (event) => {
+  const value = event.target.value;
+  showCredentialSection(value);
+  toggleGcpWarning(value); // ✅ ADD THIS
+});
   accountForm?.addEventListener('submit', handleFormSubmit);
 };
 
@@ -313,4 +329,22 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+
+const gcpWarning = document.getElementById("gcp-api-warning");
+const gcpGuideLink = document.getElementById("gcp-guide-link");
+
+function toggleGcpWarning(provider) {
+  if (!gcpWarning) return;
+
+  if (provider === "GCP") {
+    gcpWarning.classList.remove("hidden");
+
+    // attach guide link
+    gcpGuideLink.href = "setup-guide.html?provider=gcp";
+    gcpGuideLink.target = "_blank";
+  } else {
+    gcpWarning.classList.add("hidden");
+  }
 }
