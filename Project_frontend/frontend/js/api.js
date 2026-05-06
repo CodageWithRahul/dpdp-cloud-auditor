@@ -1,5 +1,5 @@
-// export const BASE_URL = 'http://127.0.0.1:6060';
-export const BASE_URL = 'https://dpdp-cloud-auditor.onrender.com';
+export const BASE_URL = 'http://127.0.0.1:6060';
+// export const BASE_URL = 'https://dpdp-cloud-auditor.onrender.com';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
