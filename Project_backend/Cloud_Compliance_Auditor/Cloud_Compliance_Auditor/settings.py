@@ -35,6 +35,8 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 if not DEBUG:
     ALLOWED_HOSTS.append(os.getenv("BACKEND_HOST"))
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Application definition
 
 INSTALLED_APPS = [
