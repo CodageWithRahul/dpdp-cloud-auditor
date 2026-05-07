@@ -487,7 +487,7 @@ const renderAccounts = () => {
 `;
 
     document.getElementById("addAccountBtn").addEventListener("click", () => {
-      window.location.href = "/frontend/pages/add_account.html";
+      window.location.href = "/pages/add_account.html";
     });
     return;
   }
