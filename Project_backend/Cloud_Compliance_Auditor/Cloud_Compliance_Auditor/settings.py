@@ -28,12 +28,23 @@ CLOUD_CREDENTIAL_ENCRYPTION_KEY = os.getenv("CLOUD_CREDENTIAL_ENCRYPTION_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-for-dev-only")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+# DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+# ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
-if not DEBUG:
-    ALLOWED_HOSTS.append(os.getenv("BACKEND_HOST"))
+# if not DEBUG:
+#     ALLOWED_HOSTS.append(os.getenv("BACKEND_HOST"))
+
+# CORS_ALLOW_ALL_ORIGINS = True
+
+
+DEBUG = False
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "dpdp-cloud-auditor.onrender.com",
+]
 
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -138,16 +149,16 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOWED_ORIGINS = []
+# CORS_ALLOWED_ORIGINS = []
 
-if DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "http://127.0.0.1:5500",
-    ]
-else:
-    CORS_ALLOWED_ORIGINS = (
-        os.getenv("FRONTEND_URL", "").split(",") if os.getenv("FRONTEND_URL") else []
-    )
+# if DEBUG:
+#     CORS_ALLOWED_ORIGINS = [
+#         "http://127.0.0.1:5500",
+#     ]
+# else:
+#     CORS_ALLOWED_ORIGINS = (
+#         os.getenv("FRONTEND_URL", "").split(",") if os.getenv("FRONTEND_URL") else []
+#     )
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "DPDP Cloud Auditor <no-reply@dpdpcloudauditor.local>"
