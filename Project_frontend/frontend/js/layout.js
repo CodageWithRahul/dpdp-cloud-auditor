@@ -55,10 +55,16 @@ const renderNav = (active) => {
 const renderFooter = () => {
   const root = document.getElementById('shell-footer');
   if (!root) return;
-  root.className = 'app-footer';
-  root.innerHTML = '<p>&copy; 2026 Cloud Auditor. Built for professional cloud security teams.</p>';
-};
 
+  root.className = 'app-footer';
+
+  root.innerHTML = `
+    <p>
+      &copy; 2026 DPDP Cloud Auditor. 
+      Developed by Rahul Gupta.
+    </p>
+  `;
+};
 const attachLogout = () => {
   const buttons = [
     document.getElementById('logout-button'),

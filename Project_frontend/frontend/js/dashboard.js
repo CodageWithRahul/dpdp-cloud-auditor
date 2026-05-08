@@ -29,12 +29,10 @@ const dashboardState = {
 const CACHE_STORAGE_KEY = 'cloudConnectionStatusCache';
 const safeSessionStorage = (() => {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      return window.sessionStorage;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
     }
-  } catch (error) {
-    // session storage unavailable
-  }
+  } catch (error) {}
   return null;
 })();
 
@@ -261,8 +259,11 @@ const populateRegionSelect = (select, regions = []) => {
 ========================= */
 const checkConnectionStatus = async (accountId) => {
   try {
-    const response = await fetchWithAuth(
-      `${BASE_URL}/api/accounts/cloud-accounts/${accountId}/connection-status/`
+      const response = await fetchWithAuth(
+      `${BASE_URL}/api/accounts/cloud-accounts/${accountId}/connection-status/`,
+      {
+        keepalive: true
+      }
     );
     const data = await response.json();
     return data;
@@ -491,8 +492,6 @@ const renderAccounts = () => {
     });
     return;
   }
-
-  console.log("gfdgfdg", window.location.pathname);
   // ✅ HAS DATA
   headEl.innerHTML = `
     <h3>Connected cloud accounts</h3>
@@ -501,9 +500,18 @@ const renderAccounts = () => {
 
   dashboardState.accounts.forEach((account) => {
     const card = buildAccountCard(account);
+
     accountsListEl.appendChild(card);
+
     const controller = createConnectionController(account, card);
-    controller.refresh();
+
+    const cached = getCachedConnectionStatus(account.id);
+
+    if (cached) {
+      controller.apply(cached, { storeCache: false });
+    } else {
+      controller.refresh();
+    }
   });
 };
 

@@ -28,6 +28,7 @@ CLOUD_CREDENTIAL_ENCRYPTION_KEY = os.getenv("CLOUD_CREDENTIAL_ENCRYPTION_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-for-dev-only")
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
+print(f"DEBUG: {DEBUG}")
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -38,13 +39,14 @@ BACKEND_HOST = os.getenv("BACKEND_HOST")
 
 if BACKEND_HOST:
     ALLOWED_HOSTS.append(BACKEND_HOST)
+    print(f"BACKEND_HOST added to ALLOWED_HOSTS: {BACKEND_HOST}")
 
 CORS_ALLOW_ALL_ORIGINS = False
 
-FRONTEND_URL = os.getenv("FRONTEND_URL")
+FRONTEND_URLS = os.getenv("FRONTEND_URLS", "")
 
-if FRONTEND_URL:
-    CORS_ALLOWED_ORIGINS = [FRONTEND_URL]
+if FRONTEND_URLS:
+    CORS_ALLOWED_ORIGINS = FRONTEND_URLS.split(",")
 
 # Application definition
 
