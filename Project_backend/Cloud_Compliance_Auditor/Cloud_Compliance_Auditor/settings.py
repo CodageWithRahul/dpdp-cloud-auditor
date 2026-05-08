@@ -41,14 +41,16 @@ if BACKEND_HOST:
     ALLOWED_HOSTS.append(BACKEND_HOST)
     print(f"BACKEND_HOST added to ALLOWED_HOSTS: {BACKEND_HOST}")
 
-FRONTEND_URLS = os.getenv("FRONTEND_URLS", "")
-print(f"FRONTEND_URLS: {FRONTEND_URLS}")
+CORS_ALLOW_ALL_ORIGINS = False
 
-if FRONTEND_URLS:
-    CORS_ALLOWED_ORIGINS = [
-        url.strip() for url in FRONTEND_URLS.split(",") if url.strip()
-    ]
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+
+print(f"FRONTEND_URL: {FRONTEND_URL}")
+
+if FRONTEND_URL:
+    CORS_ALLOWED_ORIGINS = [FRONTEND_URL]
     print(f"CORS_ALLOWED_ORIGINS set to: {CORS_ALLOWED_ORIGINS}")
+
 
 # Application definition
 
