@@ -44,9 +44,11 @@ if BACKEND_HOST:
 CORS_ALLOW_ALL_ORIGINS = False
 
 FRONTEND_URLS = os.getenv("FRONTEND_URLS", "")
+print(f"FRONTEND_URLS: {FRONTEND_URLS}")
 
 if FRONTEND_URLS:
     CORS_ALLOWED_ORIGINS = FRONTEND_URLS.split(",")
+    print(f"CORS_ALLOWED_ORIGINS set to: {CORS_ALLOWED_ORIGINS}")
 
 # Application definition
 
